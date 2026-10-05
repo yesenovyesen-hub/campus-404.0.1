@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Campus 404 — сервис поиска потерянных вещей в кампусе.">
+    <meta name="theme-color" content="#1e3a2f">
+    <title>Campus 404 — потерянное и найденное</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/glass.css">
+    <script type="module" src="js/app.js"></script>
+  </head>
+  <body>
+    <header class="site-header glass">
+      <a class="brand" href="#/" aria-label="Campus 404 — на главную"><span class="brand-mark" aria-hidden="true">⌖</span><span>Campus <span class="brand-number">404</span></span></a>
+      <form class="search" role="search" id="search-form">
+        <span aria-hidden="true">⌕</span>
+        <label class="visually-hidden" for="search-input">Поиск вещей</label>
+        <input id="search-input" type="search" placeholder="Найти вещь или место..." autocomplete="off">
+        <kbd>/</kbd>
+      </form>
+      <button class="avatar-button" id="header-profile" type="button" aria-label="Профиль"><span id="avatar-letter">?</span></button>
+    </header>
+
+    <main class="page-layout" id="app-view" tabindex="-1" aria-live="polite"></main>
+
+    <footer class="bottom-bar glass">
+      <nav class="bottom-nav" aria-label="Основная навигация">
+        <button class="nav-action" data-route="menu" type="button" aria-label="Меню" aria-expanded="false"><span class="nav-icon" aria-hidden="true">☰</span><span>Меню</span></button>
+        <button class="nav-action" data-route="chats" type="button" aria-label="Чат"><span class="nav-icon" aria-hidden="true">▢</span><span>Чат</span><span class="unread-count" id="unreadCount" aria-label="Непрочитанные сообщения" hidden>0</span></button>
+        <button class="add-action" data-route="add" type="button" aria-label="Добавить находку"><span aria-hidden="true">+</span></button>
+        <button class="nav-action" data-route="profile" type="button" aria-label="Профиль"><span class="nav-icon" aria-hidden="true">♙</span><span>Профиль</span></button>
+      </nav>
+    </footer>
+
+    <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+    <aside class="drawer glass-drawer glass" id="menu-drawer" aria-label="Меню" aria-hidden="true" inert hidden>
+      <div class="drawer-heading"><div><p class="eyebrow">НАВИГАЦИЯ</p><h2>Меню</h2></div><button class="icon-button" id="drawer-close" type="button" aria-label="Закрыть меню">×</button></div>
+      <button class="edit-button" id="edit-button" type="button">✎ <span>Редактировать</span></button>
+      <div class="filter-group">
+        <button class="filter-toggle" id="category-toggle" type="button" aria-expanded="false" aria-controls="category-options">Категории <span aria-hidden="true">⌄</span></button>
+        <div class="category-options" id="category-options" hidden></div>
+      </div>
+      <div class="theme-row"><span>Светлая тема</span><button class="theme-switch" id="theme-switch" type="button" role="switch" aria-checked="false" aria-label="Светлая тема"><span></span></button></div>
+      <p class="drawer-note">Нашёл чужое? Помоги вещи вернуться домой.</p>
+    </aside>
+
+    <dialog class="name-dialog glass add-dialog" id="name-dialog" aria-labelledby="name-title">
+      <form id="name-form" class="stack-form">
+        <div><p class="eyebrow">ДОБРО ПОЖАЛОВАТЬ</p><h2 id="name-title">Как вас зовут?</h2></div>
+        <label for="name-input">Ваше имя</label><input id="name-input" name="name" maxlength="40" required autocomplete="name">
+        <button class="primary-button" type="submit">Продолжить</button>
+      </form>
+    </dialog>
+
+    <dialog class="chat-modal glass add-dialog" id="chatModal" aria-labelledby="chatTitle">
+      <div class="chat-shell">
+        <header class="chat-header"><div class="bot-avatar" aria-hidden="true">C4</div><div class="chat-heading"><strong id="chatTitle">Переписка</strong><span class="chat-online">Campus 404</span></div><button class="icon-button" id="chatClose" type="button" aria-label="Закрыть чат">×</button></header>
+        <div class="chat-messages" id="chatMessages" aria-live="polite" aria-relevant="additions"></div>
+        <div class="typing-indicator" id="typingIndicator" aria-live="polite" hidden>Собеседник печатает…</div>
+        <form class="chat-composer" id="chatForm"><label class="visually-hidden" for="chatInput">Ваше сообщение</label><textarea id="chatInput" rows="1" maxlength="1000" placeholder="Напишите сообщение…"></textarea><button class="chat-send" id="chatSend" type="submit" aria-label="Отправить сообщение">➤</button></form>
+      </div>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
