@@ -63,7 +63,7 @@
 .item-card--doc .item-meta { border-color: rgba(73, 54, 30, .22); }
 .item-card--doc .category-tag { background: rgba(84, 63, 35, .1); color: #453720; }
 .item-card--doc .rating-summary { color: #80601c; }
-.item-card--doc .text-button { color: #453720; }
+.item-card--doc .text-button { color: #c0ae91; }
 .item-card--doc .text-button:hover { background: rgba(69, 55, 32, .12); }
 
 .item-card--tech {

@@ -1,4 +1,5 @@
 import { CATEGORIES, REWARDS, REQUIRED_ACTIVE_DAYS } from "./constants.js";
+import { getChatReply } from "./chat-replies.js";
 import { renderEditor as mountEditor } from "./editor.js";
 import { createCardImage, initImagePicker } from "./image-upload.js";
 import { getPersona } from "./personas.js";
@@ -686,32 +687,6 @@ function keepDrawerFocus(event) {
   }
 }
 
-const botResponses = [
-  { keywords: ["привет", "здравствуй", "хай", "добрый", "hello", "hi"], answers: ["Привет! 👋 Рад, что вы откликнулись. Да, вещь ещё у меня.", "Здравствуйте! Да, я нашёл эту вещь и она пока у меня."] },
-  { keywords: ["где", "место", "встрет", "забрать", "отдать"], answers: ["Можем встретиться в главном корпусе, у ресепшена. Вам удобно?", "Обычно я бываю в библиотеке на 2 этаже. Или можем договориться о другом месте."] },
-  { keywords: ["когда", "время", "сегодня", "завтра", "час"], answers: ["Сегодня я свободен после 15:00. Завтра — в любое время с 10 до 18.", "Давайте сегодня? Я могу подождать у главного входа."] },
-  { keywords: ["описан", "как выглядит", "цвет", "признак", "детал", "фото"], description: true },
-  { keywords: ["спасибо", "благодар", "thanks", "спс"], answers: ["Не за что! 😊 Рад помочь.", "Пожалуйста! Давайте встретимся и я передам вещь."] },
-  { keywords: ["состоян", "цел", "работ", "поврежд", "сломан"], answers: ["Вещь в хорошем состоянии, я её бережно хранил.", "Всё цело, повреждений не заметил."] },
-  { keywords: ["вернул", "забрал", "получил", "встретил"], answers: ["Вещь уже возвращена владельцу. Спасибо за интерес!"] }
-];
-const defaultReplies = ["Понял вас. Уточните, пожалуйста, что именно вас интересует?", "Хорошо, давайте обсудим детали. Когда вам удобно встретиться?", "Принято. Я на связи, пишите!"];
-
-async function getBotReply(text, item) {
-  const normalized = text.toLocaleLowerCase("ru");
-  const matched = botResponses.find((response) => response.keywords.some((word) => normalized.includes(word)));
-  const returned = matched?.keywords.some((word) => ["вернул", "забрал", "получил", "встретил"].includes(word))
-    || item.status === "Возвращено";
-  const replies = matched?.answers || defaultReplies;
-  const reply = matched?.description
-    ? `Это ${item.title}. Нашёл в ${item.location}. Категория: ${item.category}. Состояние хорошее.`
-    : returned
-      ? "Вещь уже возвращена владельцу. Спасибо за интерес!"
-      : replies[Math.floor(Math.random() * replies.length)];
-  await new Promise((resolve) => window.setTimeout(resolve, 700));
-  return reply;
-}
-
 function appendMessage(message) {
   const bubble = element("div", `chat-message chat-message--${message.sender}`, message.text);
   chatMessages.append(bubble);
@@ -729,10 +704,12 @@ function openChat(id) {
   activeItem = item;
   activeHistory = store.getChat(id);
   if (!activeHistory.length) {
-    activeHistory.push({ sender: "bot", text: `Здравствуйте! Я нашёл вещь «${item.title}» в месте «${item.location}». Задавайте любые вопросы, договоримся о встрече.` });
+    activeHistory.push({ sender: "bot", text: getChatReply("Привет!", item) });
     saveActiveChat();
   }
-  document.querySelector("#chatTitle").textContent = item.title;
+  const persona = getPersona(item);
+  document.querySelector("#chatTitle").textContent = `${persona.emoji} ${persona.name}`;
+  document.querySelector("#chatItemTitle").textContent = item.title;
   chatMessages.replaceChildren();
   activeHistory.forEach(appendMessage);
   try { store.setUnread(0); } catch (error) { reportStorageError(error); }
@@ -754,7 +731,8 @@ async function sendMessage() {
   pendingReplies += 1;
   chatSend.disabled = true;
   try {
-    const reply = await getBotReply(text, item);
+    const reply = getChatReply(text, item, history);
+    await new Promise((resolve) => window.setTimeout(resolve, 700));
     history.push({ sender: "bot", text: reply });
     try { store.setChat(item.id, history); } catch (error) { reportStorageError(error); }
     if (activeItem?.id === item.id && chatModal.open) {
