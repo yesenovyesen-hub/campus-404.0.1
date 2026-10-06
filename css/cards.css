@@ -190,3 +190,85 @@
 @media (prefers-reduced-motion: reduce) {
   .item-card--value { animation: none; }
 }
+
+:root {
+  --item-card-text: #fff;
+  --item-card-secondary: #e5e7eb;
+}
+
+:root[data-theme="light"] {
+  --item-card-text: #1f2937;
+  --item-card-secondary: #374151;
+}
+
+.item-card[data-category="Электроника"] { background: #343b45; }
+.item-card[data-category="Документы"] { background: #19385e; }
+.item-card[data-category="Одежда"] {
+  background: #581b2d;
+  --item-card-text: #fff;
+  --item-card-secondary: #f3dce2;
+}
+.item-card[data-category="Книги"] { background: #51402f; }
+.item-card[data-category="Другое"] {
+  background: linear-gradient(120deg, #fff 0%, #ff8a00 50%, #fff 100%);
+  background-size: 250% 250%;
+  animation: other-card-flow 5s ease-in-out infinite;
+}
+
+:root[data-theme="light"] .item-card[data-category="Электроника"] { background: #e5e7eb; }
+:root[data-theme="light"] .item-card[data-category="Документы"] { background: #dcebff; }
+:root[data-theme="light"] .item-card[data-category="Одежда"] {
+  background: #e8c7cf;
+  --item-card-text: #1f2937;
+  --item-card-secondary: #374151;
+}
+:root[data-theme="light"] .item-card[data-category="Книги"] { background: #d6b892; }
+
+.item-card .item-title-row h3 {
+  color: var(--item-card-text);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.item-card .item-type,
+.item-card .item-location,
+.item-card .item-description,
+.item-card .persona-description,
+.item-card .item-meta,
+.item-card .category-tag,
+.item-card .rating-summary,
+.item-card .persona-badge {
+  color: var(--item-card-secondary);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.item-card .status,
+.item-card .item-ribbon,
+.item-card .image-index {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.item-card .contact-button,
+.item-card .text-button,
+.item-card .persona-badge {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.item-card .text-button { color: var(--item-card-text); }
+
+:root[data-theme="dark"] .item-card[data-category="Другое"] *,
+:root:not([data-theme]) .item-card[data-category="Другое"] * {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .85), 0 0 4px rgba(0, 0, 0, .7);
+}
+
+@keyframes other-card-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item-card[data-category="Другое"] { animation: none; }
+}
