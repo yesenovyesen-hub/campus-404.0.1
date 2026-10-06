@@ -1,6 +1,7 @@
 import { CATEGORIES, REWARDS, REQUIRED_ACTIVE_DAYS } from "./constants.js";
 import { renderEditor as mountEditor } from "./editor.js";
 import { createCardImage, initImagePicker } from "./image-upload.js";
+import { getPersona } from "./personas.js";
 import { getWeekProgress } from "./rewards.js";
 import { store } from "./store.js";
 
@@ -218,6 +219,56 @@ function makeCard(item, index) {
   meta.append(element("span", "category-tag", item.category), element("time", "", item.time || item.createdAt || ""));
   info.append(titleRow, type);
   if (item.description) info.append(element("p", "item-description", item.description));
+  const persona = getPersona(item);
+  const personaButton = element("button", "persona-badge", `${persona.emoji} ${persona.name}`);
+  personaButton.type = "button";
+  personaButton.setAttribute("aria-expanded", "false");
+  const personaDescription = element("p", "persona-description");
+  personaDescription.hidden = true;
+  personaDescription.setAttribute("aria-live", "polite");
+  personaButton.addEventListener("click", async () => {
+    if (!personaDescription.hidden) {
+      personaDescription.hidden = true;
+      personaButton.setAttribute("aria-expanded", "false");
+      return;
+    }
+
+    personaDescription.hidden = false;
+    personaButton.setAttribute("aria-expanded", "true");
+    if (personaDescription.dataset.loaded === "true" || personaButton.disabled) return;
+
+    personaButton.disabled = true;
+    personaDescription.textContent = "Готовим описание…";
+    personaDescription.classList.add("is-loading");
+    try {
+      const response = await fetch("/api/persona-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: item.title,
+          category: item.category,
+          description: item.description || "Описание не указано.",
+          location: item.location,
+          date: item.time || item.createdAt || "Дата не указана.",
+          personaId: persona.id
+        })
+      });
+      const result = await response.json();
+      if (!response.ok || typeof result.description !== "string" || !result.description.trim()) {
+        throw new Error(result.error || "Не удалось получить AI-описание.");
+      }
+      personaDescription.textContent = result.description.slice(0, 360);
+      personaDescription.dataset.loaded = "true";
+    } catch {
+      personaDescription.textContent = item.description || "Обычное описание для этой находки не добавлено.";
+      personaDescription.dataset.loaded = "true";
+      personaDescription.classList.add("is-fallback");
+    } finally {
+      personaButton.disabled = false;
+      personaDescription.classList.remove("is-loading");
+    }
+  });
+  info.append(personaButton, personaDescription);
   info.append(place, meta, element("p", "rating-summary", averageText(item)));
 
   const actions = element("div", "card-actions");
