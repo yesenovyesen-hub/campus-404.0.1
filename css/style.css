@@ -95,8 +95,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); }
 .search input::placeholder { color: var(--muted); opacity: 1; }
 .search kbd { padding: 1px 7px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font-size: 12px; }
-.avatar-button { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: rgba(141,221,171,.2); color: var(--ink); cursor: pointer; font-weight: 700; }
-.avatar-button img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.avatar-button { position: relative; display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; overflow: hidden; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: rgba(141,221,171,.2); color: var(--ink); cursor: pointer; font-weight: 700; }
+.avatar-button img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center; }
 
 .page-layout { width: min(1360px, 100%); min-height: calc(100vh - 150px); margin: 0 auto; padding: 36px 32px 120px; }
 .feed-page { display: block; }
