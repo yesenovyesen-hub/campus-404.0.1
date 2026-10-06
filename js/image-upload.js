@@ -1,3 +1,5 @@
+import { getItemImage } from "./item-images.js";
+
 function compressImage(file, maxSide = 1024, quality = 0.8) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -91,21 +93,31 @@ export function initImagePicker({ multiple = false } = {}) {
   };
 }
 
-export function createCardImage(card) {
+export function createCardImage(card, placeholderIcon = "fa-box") {
   const imageBox = document.createElement("div");
   imageBox.className = "item-image";
-  if (card.image) {
-    const image = document.createElement("img");
-    image.src = card.image;
-    image.alt = card.imageAlt || `Фотография: ${card.title}`;
-    image.loading = "lazy";
-    imageBox.append(image);
-  } else {
+  let imageElement = null;
+  const showPlaceholder = () => {
     const placeholder = document.createElement("div");
     placeholder.className = "item-image-placeholder";
     placeholder.setAttribute("aria-hidden", "true");
-    placeholder.textContent = "Фото не добавлено";
-    imageBox.append(placeholder);
+    const icon = document.createElement("i");
+    icon.className = `fa-solid ${placeholderIcon}`;
+    icon.setAttribute("aria-hidden", "true");
+    placeholder.append(icon);
+    imageBox.prepend(placeholder);
+    imageElement?.remove();
+  };
+  const imageSrc = getItemImage(card);
+  if (imageSrc) {
+    imageElement = document.createElement("img");
+    imageElement.alt = card.title;
+    imageElement.loading = "lazy";
+    imageElement.addEventListener("error", showPlaceholder, { once: true });
+    imageElement.src = imageSrc;
+    imageBox.append(imageElement);
+  } else {
+    showPlaceholder();
   }
   return imageBox;
 }

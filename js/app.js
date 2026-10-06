@@ -20,6 +20,7 @@ let activeItem = null;
 let activeHistory = [];
 let pendingReplies = 0;
 let selectedCategory = "all";
+let activeView = "feed";
 let drawerCloseTimeout;
 
 function element(tag, className, text) {
@@ -68,9 +69,10 @@ function renderCategories() {
   for (const [value, label] of [["all", "Все"], ...CATEGORIES.map((category) => [category, category])]) {
     const button = element("button", "category-option", label);
     button.type = "button";
-    button.setAttribute("aria-pressed", String(selectedCategory === value));
+    button.dataset.category = value;
     button.addEventListener("click", () => {
       selectedCategory = value;
+      updateCategorySelection();
       document.querySelector("#category-toggle").setAttribute("aria-expanded", "false");
       categoryOptions.hidden = true;
       closeDrawer();
@@ -80,23 +82,95 @@ function renderCategories() {
     });
     categoryOptions.append(button);
   }
+  updateCategorySelection();
+}
+
+function updateCategorySelection() {
+  categoryOptions.querySelectorAll(".category-option").forEach((button) => {
+    const selected = button.dataset.category === selectedCategory;
+    button.classList.toggle("is-active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+    if (selected) button.setAttribute("aria-current", "true");
+    else button.removeAttribute("aria-current");
+  });
+}
+
+function updateNavigationState(route = decodeURIComponent(location.hash.replace(/^#\/?/, ""))) {
+  if (drawer?.classList.contains("is-open")) {
+    activeView = "menu";
+  } else if (route === "profile") {
+    activeView = "profile";
+  } else if (route === "chats") {
+    activeView = "chats";
+  } else if (["add", "edit", "sell"].includes(route)) {
+    activeView = "add";
+  } else {
+    activeView = "feed";
+  }
+
+  document.querySelectorAll(".bottom-nav [data-route]").forEach((button) => {
+    const isActive = button.dataset.route === activeView;
+    button.classList.toggle("is-active", isActive);
+    if (isActive) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
 }
 
 function averageText(item) {
   const average = store.getAverageRating(item.id);
-  return average === null ? "Пока без оценок" : `★ ${average.toFixed(1)} · ${item.ratings.length} ${item.ratings.length === 1 ? "оценка" : "оценок"}`;
+  const score = average ?? item.rating ?? null;
+  return score === null ? "Пока без оценок" : `★ ${score.toFixed(1)} · ${item.ratings.length || 1} ${(item.ratings.length || 1) === 1 ? "оценка" : "оценок"}`;
 }
 
-function makeCard(item) {
+function iconForItem(item) {
+  const titleAndType = `${item.title} ${item.type}`.toLocaleLowerCase("ru");
+  if (/часы/.test(titleAndType)) return "fa-clock";
+  if (/золото|кольцо|серьг|медальон|цепоч|украш/.test(titleAndType)) return "fa-gem";
+  if (/игруш|мишк|заяц|дракон|кукл|капибар/.test(titleAndType)) return "fa-heart";
+  if (/билет|книж|пропуск|документ|проездн/.test(titleAndType)) return "fa-id-card";
+  if (/airpods|наушник|гарнитур/.test(titleAndType)) return "fa-headphones";
+  if (/смартфон|телефон/.test(titleAndType)) return "fa-mobile-screen-button";
+  if (/power bank|пауэрбанк|аккумулятор|зарядк/.test(titleAndType)) return "fa-battery-full";
+  if (/шарф/.test(titleAndType)) return "fa-snowflake";
+  if (/худи|толстовк|кофт|перчатк/.test(titleAndType)) return "fa-shirt";
+  if (/книг|учебник|тетрад|ежедневник/.test(titleAndType)) return "fa-book-open";
+  if (/ключ/.test(titleAndType)) return "fa-key";
+  if (/очк/.test(titleAndType)) return "fa-glasses";
+  if (/зонт/.test(titleAndType)) return "fa-umbrella";
+  if (/рюкзак/.test(titleAndType)) return "fa-suitcase";
+  if (/ракетк/.test(titleAndType)) return "fa-baseball";
+  if (/скейт/.test(titleAndType)) return "fa-person-snowboarding";
+  if (/гитар/.test(titleAndType)) return "fa-guitar";
+  if (/кружк|термос/.test(titleAndType)) return "fa-mug-hot";
+  if (/ручк/.test(titleAndType)) return "fa-pen";
+  return "fa-box";
+}
+
+function makeCard(item, index) {
   const card = element("article", "item-card");
+  const variant = ["value", "toy", "doc", "tech", "cloth", "book", "misc"].includes(item.variant) ? item.variant : "misc";
+  card.classList.add(`item-card--${variant}`);
+  if ((index + 1) % 5 === 0) card.classList.add("item-card--wide");
   card.dataset.cardId = item.id;
   card.dataset.ownerName = item.ownerName;
   card.dataset.category = item.category;
-  card.dataset.search = `${item.title} ${item.location} ${item.category} ${item.description || ""}`.toLocaleLowerCase("ru");
+  card.dataset.search = `${item.title} ${item.type || ""} ${item.keywords || ""} ${item.description || ""} ${item.location} ${item.category}`.toLocaleLowerCase("ru");
 
-  const imageBox = createCardImage(item);
-  const index = element("span", "image-index", item.isOwn ? "МОЯ НАХОДКА" : "НАХОДКА");
-  imageBox.append(index);
+  const imageBox = createCardImage(item, iconForItem(item));
+  imageBox.classList.add(`item-image--${variant}`);
+  const imageLabel = element("span", "image-index", item.isOwn ? "МОЯ НАХОДКА" : "НАХОДКА");
+  imageBox.append(imageLabel);
+  if (item.isValuable) {
+    const valuable = element("span", "item-ribbon item-ribbon--value");
+    valuable.append(element("i", "fa-solid fa-gem"), document.createTextNode(" Ценная находка"));
+    valuable.firstChild.setAttribute("aria-hidden", "true");
+    imageBox.append(valuable);
+  } else if (variant === "doc") {
+    const documentBadge = element("span", "item-ribbon item-ribbon--doc");
+    documentBadge.append(element("i", "fa-solid fa-id-card"), document.createTextNode(" Документ"));
+    documentBadge.firstChild.setAttribute("aria-hidden", "true");
+    imageBox.append(documentBadge);
+  }
   if (item.isOwn) {
     const remove = iconButton(`Удалить объявление «${item.title}»`, "⌫");
     remove.className = "remove-item";
@@ -114,14 +188,16 @@ function makeCard(item) {
   const info = element("div", "item-info");
   const titleRow = element("div", "item-title-row");
   titleRow.append(element("h3", "", item.title));
-  const status = element("span", `status ${item.status === "Возвращено" ? "status-returned" : "status-found"}`, item.status);
+  const isReturned = item.status === "returned" || item.status === "Возвращено";
+  const status = element("span", `status ${isReturned ? "status-returned" : "status-found"}`, isReturned ? "Возвращено" : "Найдено");
   titleRow.append(status);
+  const type = element("p", "item-type", item.type || item.category);
   const place = element("p", "item-location", `⌖ ${item.location}`);
   const meta = element("div", "item-meta");
-  meta.append(element("span", "category-tag", item.category), element("span", "", item.createdAt || ""));
-  info.append(titleRow, place);
+  meta.append(element("span", "category-tag", item.category), element("time", "", item.time || item.createdAt || ""));
+  info.append(titleRow, type);
   if (item.description) info.append(element("p", "item-description", item.description));
-  info.append(meta, element("p", "rating-summary", averageText(item)));
+  info.append(place, meta, element("p", "rating-summary", averageText(item)));
 
   const actions = element("div", "card-actions");
   const contact = element("button", "contact-button", "Написать");
@@ -134,7 +210,7 @@ function makeCard(item) {
     review.addEventListener("click", () => navigate(`/review/${encodeURIComponent(item.id)}`));
     actions.append(review);
   }
-  if (item.status !== "Возвращено") {
+  if (!isReturned) {
     const returned = element("button", "text-button", "Отметить как возвращено");
     returned.type = "button";
     returned.addEventListener("click", () => {
@@ -163,7 +239,7 @@ function renderFeed() {
   const items = store.getItems().filter((item) => {
     const query = searchInput.value.trim().toLocaleLowerCase("ru");
     return (selectedCategory === "all" || item.category === selectedCategory)
-      && `${item.title} ${item.location} ${item.category} ${item.description || ""}`.toLocaleLowerCase("ru").includes(query);
+      && `${item.title} ${item.type || ""} ${item.keywords || ""} ${item.description || ""} ${item.location} ${item.category}`.toLocaleLowerCase("ru").includes(query);
   });
   const count = element("div", "results-count");
   count.append(element("strong", "", String(items.length)), document.createTextNode(` ${items.length === 1 ? "объявление" : "объявлений"}`));
@@ -172,7 +248,7 @@ function renderFeed() {
   feedHeading.append(element("h2", "", "Последние находки"), element("span", "", "Обновлено недавно"));
   const grid = element("div", "items-grid");
   grid.id = "items-grid";
-  items.forEach((item) => grid.append(makeCard(item)));
+  items.forEach((item, index) => grid.append(makeCard(item, index)));
   app.append(heading, feedHeading, grid);
   if (!items.length) app.append(element("p", "empty-state", "Ничего не нашлось. Попробуйте изменить запрос или категорию."));
 }
@@ -365,6 +441,7 @@ function navigate(path) {
 
 function renderRoute() {
   const route = decodeURIComponent(location.hash.replace(/^#\/?/, ""));
+  updateNavigationState(route);
   searchInput.hidden = route !== "" && route !== "/";
   app.replaceChildren();
   if (route === "" || route === "/") renderFeed();
@@ -392,7 +469,10 @@ function openDrawer() {
   drawer.inert = false;
   drawer.setAttribute("aria-hidden", "false");
   drawerBackdrop.hidden = false;
-  window.requestAnimationFrame(() => drawer.classList.add("is-open"));
+  window.requestAnimationFrame(() => {
+    drawer.classList.add("is-open");
+    updateNavigationState();
+  });
   document.querySelector('[data-route="menu"]').setAttribute("aria-expanded", "true");
   document.querySelector("#drawer-close").focus();
 }
@@ -404,6 +484,7 @@ function closeDrawer() {
   drawer.setAttribute("aria-hidden", "true");
   drawerBackdrop.hidden = true;
   document.querySelector('[data-route="menu"]').setAttribute("aria-expanded", "false");
+  updateNavigationState();
   document.querySelector('[data-route="menu"]').focus();
   drawerCloseTimeout = window.setTimeout(() => { drawer.hidden = true; }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250);
 }

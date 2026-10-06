@@ -4,6 +4,20 @@ import assert from "node:assert/strict";
 const values = new Map();
 let rejectNextWrite = false;
 values.set("chat_card_airpods", JSON.stringify([{ sender: "bot", text: "Старая история чата" }]));
+values.set("campus404_seed_v1", "1");
+values.set("campus404_seed_v2", "2");
+values.set("campus404_seed_v3", "3");
+values.set("campus404:data:v1", JSON.stringify({
+  items: [
+    { id: "seed-1", title: "Старая демо-карточка", category: "Другое", isOwn: false },
+    { id: "own-card", title: "Моя карточка", category: "Книги", isOwn: true, ratings: [] }
+  ],
+  chats: {},
+  activity: [],
+  userName: "Алия",
+  theme: "dark",
+  unread: 0
+}));
 globalThis.localStorage = {
   getItem(key) { return values.has(key) ? values.get(key) : null; },
   get length() { return values.size; },
@@ -19,10 +33,11 @@ globalThis.localStorage = {
 };
 const { store, STORAGE_KEY } = await import("../js/store.js");
 
-test("seeds a useful set of lost-and-found cards once", () => {
-  assert.ok(store.getItems().length >= 12);
-  assert.equal(values.get("campus404_seed_v1"), "1");
-  assert.equal(store.seedCards([{ id: "duplicate-seed", title: "Duplicate", category: "Другое" }]), false);
+test("migrates older seed cards to local photos once", () => {
+  assert.equal(store.getItems().filter((item) => !item.isOwn).length, 40);
+  assert.equal(values.get("campus404_seed_v4"), "4");
+  assert.equal(store.getItem("seed-1").imageFile, "assets/seed/airpods.jpg");
+  assert.equal(store.getItem("own-card").title, "Моя карточка");
 });
 test("migrates existing MVP chat history", () => {
   assert.equal(store.getChat("airpods")[0].text, "Старая история чата");
@@ -30,7 +45,7 @@ test("migrates existing MVP chat history", () => {
 test("returns copies instead of exposing stored card references", () => {
   const card = store.getItems()[0];
   card.title = "mutated";
-  assert.notEqual(store.getItem("airpods").title, "mutated");
+  assert.notEqual(store.getItem("seed-1").title, "mutated");
 });
 test("saving an item marks it as own and persists it", () => {
   store.setName("Алия");
@@ -44,7 +59,7 @@ test("saving requires title, location and category", () => {
   assert.throws(() => store.saveItem({ title: "Ключи" }), TypeError);
 });
 test("cannot delete a sample item", () => {
-  assert.equal(store.removeItem("airpods"), false);
+  assert.equal(store.removeItem("seed-1"), false);
 });
 test("deletes only own cards", () => {
   const item = store.saveItem({ title: "Ключи", location: "Холл", category: "Другое" });
@@ -63,7 +78,7 @@ test("stores a chat without changing message text", () => {
   assert.equal(store.getChat("airpods")[0].text, "<b>hello</b>");
 });
 test("chat list contains only cards with a conversation", () => {
-  store.setChat("airpods", [{ sender: "bot", text: "Привет" }]);
+  store.setChat("seed-1", [{ sender: "bot", text: "Привет" }]);
   assert.equal(store.getChats().length, 1);
 });
 test("rejects ratings for own cards", () => {
@@ -71,34 +86,34 @@ test("rejects ratings for own cards", () => {
   assert.throws(() => store.addRating(item.id, { score: 5 }), /Нельзя оценить/);
 });
 test("accepts a rating for someone else's card and computes average", () => {
-  store.addRating("airpods", { score: 4, text: "Отлично" });
-  store.addRating("airpods", { score: 5 });
-  assert.equal(store.getAverageRating("airpods"), 4.5);
+  store.addRating("seed-1", { score: 4, text: "Отлично" });
+  store.addRating("seed-1", { score: 5 });
+  assert.equal(store.getAverageRating("seed-1"), 4.5);
 });
 test("rating score must be from one to five", () => {
-  assert.throws(() => store.addRating("airpods", { score: 6 }), RangeError);
+  assert.throws(() => store.addRating("seed-1", { score: 6 }), RangeError);
 });
 test("review text and image attachments are limited", () => {
-  store.addRating("airpods", { score: 5, text: "x".repeat(501), images: ["a", "b", "c", "d"] });
-  const rating = store.getItem("airpods").ratings.at(-1);
+  store.addRating("seed-1", { score: 5, text: "x".repeat(501), images: ["a", "b", "c", "d"] });
+  const rating = store.getItem("seed-1").ratings.at(-1);
   assert.equal(rating.text.length, 500);
   assert.equal(rating.images.length, 3);
 });
 test("marking returned updates status and weekly activity", () => {
   const date = new Date(2026, 9, 5);
-  assert.equal(store.markReturned("airpods", date), true);
-  assert.equal(store.getItem("airpods").status, "Возвращено");
+  assert.equal(store.markReturned("seed-1", date), true);
+  assert.equal(store.getItem("seed-1").status, "Возвращено");
   assert.deepEqual(store.getActivity(), ["2026-10-05"]);
 });
 test("already-returned card does not add duplicate activity", () => {
   const date = new Date(2026, 9, 5);
-  store.markReturned("airpods", date);
-  assert.equal(store.markReturned("airpods", date), false);
+  store.markReturned("seed-1", date);
+  assert.equal(store.markReturned("seed-1", date), false);
   assert.deepEqual(store.getActivity(), ["2026-10-05"]);
 });
 test("quota failures roll back item and only newly recorded activity", () => {
   const date = new Date(2026, 9, 5);
-  store.markReturned("airpods", date);
+  store.markReturned("seed-1", date);
   rejectNextWrite = true;
   assert.throws(() => store.saveItem({ title: "Ручка", location: "Аудитория", category: "Другое" }, date), { name: "QuotaExceededError" });
   assert.equal(store.getItems().some((item) => item.title === "Ручка"), false);

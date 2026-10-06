@@ -1,8 +1,8 @@
 import { getLocalDateKey, hasEarnedWeeklyBonus } from "./rewards.js";
-import { buildSeedCards } from "./seed-cards.js";
+import { buildSeedCards, SEED_VERSION } from "./seed-cards.js";
 
 const STORAGE_KEY = "campus404:data:v1";
-const SEED_FLAG = "campus404_seed_v1";
+const SEED_FLAG = `campus404_seed_v${SEED_VERSION}`;
 
 function readLegacyChats() {
   const chats = {};
@@ -45,18 +45,6 @@ function markActivity(date = new Date()) {
 }
 
 export const store = {
-  seedCards(cards) {
-    if (state.items.length || !Array.isArray(cards) || cards.length === 0) return false;
-    state.items = cards.map((card) => ({ ...card, ratings: [...(card.ratings || [])] }));
-    try {
-      persist();
-      localStorage.setItem(SEED_FLAG, "1");
-    } catch (error) {
-      state.items = [];
-      throw error;
-    }
-    return true;
-  },
   getItems() { return state.items.map((item) => ({ ...item, ratings: (item.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) })); },
   getItem(id) { const item = state.items.find((entry) => entry.id === id); return item ? { ...item, ratings: (item.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) } : null; },
   saveItem(item, date = new Date()) {
@@ -111,8 +99,19 @@ export const store = {
   hasWeeklyBonus(date = new Date()) { return hasEarnedWeeklyBonus(state.activity, date); }
 };
 
-if (state.items.length === 0 && localStorage.getItem(SEED_FLAG) !== "1") {
-  store.seedCards(buildSeedCards());
+if (localStorage.getItem(SEED_FLAG) !== String(SEED_VERSION)) {
+  const previousItems = state.items;
+  state.items = [
+    ...state.items.filter((item) => item.isOwn === true),
+    ...buildSeedCards()
+  ];
+  try {
+    persist();
+    localStorage.setItem(SEED_FLAG, String(SEED_VERSION));
+  } catch (error) {
+    state.items = previousItems;
+    throw error;
+  }
 }
 
 export { STORAGE_KEY };
