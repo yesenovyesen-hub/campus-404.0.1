@@ -3,6 +3,8 @@ import { buildSeedCards, SEED_VERSION } from "./seed-cards.js";
 
 const STORAGE_KEY = "campus404:data:v1";
 const SEED_FLAG = `campus404_seed_v${SEED_VERSION}`;
+const AVATAR_DATA_URL = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/;
+const MAX_AVATAR_LENGTH = 1_500_000;
 
 function readLegacyChats() {
   const chats = {};
@@ -23,10 +25,10 @@ function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const legacyChats = readLegacyChats();
-    if (!raw) return { items: [], chats: legacyChats, activity: [], userName: "", theme: "", unread: 0 };
+    if (!raw) return { items: [], chats: legacyChats, activity: [], userName: "", userAvatar: "", theme: "", unread: 0 };
     const data = JSON.parse(raw);
     if (!data || !Array.isArray(data.items)) throw new Error("Некорректный формат сохранённых данных Campus 404.");
-    return { items: [], chats: legacyChats, activity: [], userName: "", theme: "", unread: 0, ...data, chats: { ...legacyChats, ...(data.chats || {}) } };
+    return { items: [], chats: legacyChats, activity: [], userName: "", userAvatar: "", theme: "", unread: 0, ...data, chats: { ...legacyChats, ...(data.chats || {}) } };
   } catch (error) {
     if (error instanceof SyntaxError) throw new Error("Не удалось прочитать сохранённые данные Campus 404.", { cause: error });
     throw error;
@@ -65,6 +67,21 @@ export const store = {
   },
   setName(name) { const previous = state.userName; state.userName = name.trim(); try { persist(); } catch (error) { state.userName = previous; throw error; } },
   getName() { return state.userName; },
+  getAvatar() {
+    return typeof state.userAvatar === "string"
+      && state.userAvatar.length <= MAX_AVATAR_LENGTH
+      && AVATAR_DATA_URL.test(state.userAvatar)
+      ? state.userAvatar
+      : "";
+  },
+  setAvatar(avatar) {
+    if (avatar !== null && (typeof avatar !== "string" || avatar.length > MAX_AVATAR_LENGTH || !AVATAR_DATA_URL.test(avatar))) {
+      throw new TypeError("Аватар должен быть изображением JPEG допустимого размера.");
+    }
+    const previous = state.userAvatar;
+    state.userAvatar = avatar || "";
+    try { persist(); } catch (error) { state.userAvatar = previous; throw error; }
+  },
   getTheme() { return state.theme; },
   setTheme(theme) { if (!["light", "dark"].includes(theme)) throw new TypeError("Неизвестная тема."); const previous = state.theme; state.theme = theme; try { persist(); } catch (error) { state.theme = previous; throw error; } },
   getChat(id) { return (state.chats[id] || []).map((message) => ({ ...message })); },

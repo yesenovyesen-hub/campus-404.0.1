@@ -5,18 +5,17 @@ const ITEM_IMAGES = Object.freeze({
   transitTicket: "assets/seed/transit-ticket.jpg",
   hoodie: "assets/seed/gray-hoodie.jpg",
   airpods: "assets/seed/airpods.jpg",
-  goldWatch: "assets/seed/gold-watch.jpg",
-  teddyBear: "assets/seed/teddy-bear.jpg"
+  goldWatch: "assets/seed/gold-watch.jpg"
 });
 
 const ITEM_MATCHES = [
-  [/зач[её]тн(?:ая|ой)?\s*книжк|зач[её]тк|grade\s*book/i, ITEM_IMAGES.gradebook],
-  [/пропуск|студенческ(?:ий|ого)?\s+билет|campus\s+pass|student\s+(?:id|card)/i, ITEM_IMAGES.campusPass],
-  [/серьг|earrings?/i, ITEM_IMAGES.earrings],
-  [/проездн|транспортн(?:ый|ого)?\s+билет|transit\s+(?:pass|ticket)|bus\s+ticket/i, ITEM_IMAGES.transitTicket],
-  [/худи|толстов|hoodie/i, ITEM_IMAGES.hoodie],
-  [/airpods|наушник/i, ITEM_IMAGES.airpods],
-  [/золот(?:ые|ых)\s+час|часы|watch/i, ITEM_IMAGES.goldWatch]
+  { pattern: /зач[её]тн(?:ая|ой)?\s*книжк|зач[её]тк|grade\s*book/i, image: ITEM_IMAGES.gradebook, categories: ["Документы", "Книги"] },
+  { pattern: /пропуск|студенческ(?:ий|ого)?\s+билет|campus\s+pass|student\s+(?:id|card)/i, image: ITEM_IMAGES.campusPass, categories: ["Документы"] },
+  { pattern: /серьг|earrings?/i, image: ITEM_IMAGES.earrings, categories: ["Другое"] },
+  { pattern: /проездн|транспортн(?:ый|ого)?\s+билет|transit\s+(?:pass|ticket)|bus\s+ticket/i, image: ITEM_IMAGES.transitTicket, categories: ["Документы"] },
+  { pattern: /худи|толстов|hoodie/i, image: ITEM_IMAGES.hoodie, categories: ["Одежда"] },
+  { pattern: /airpods|наушник/i, image: ITEM_IMAGES.airpods, categories: ["Электроника"] },
+  { pattern: /золот(?:ые|ых)\s+час|gold\s+watch/i, image: ITEM_IMAGES.goldWatch, categories: ["Другое"] }
 ];
 
 function suppliedImage(item) {
@@ -30,21 +29,23 @@ export function getItemImage(item = {}) {
   const supplied = suppliedImage(item);
   if (supplied) return supplied;
 
-  const searchable = [item.title, item.type, item.description]
+  const primarySearch = [item.title, item.type]
     .filter((value) => typeof value === "string")
     .join(" ")
     .normalize("NFKC");
 
-  for (const [pattern, image] of ITEM_MATCHES) {
-    if (pattern.test(searchable)) return image;
+  for (const match of ITEM_MATCHES) {
+    if (match.pattern.test(primarySearch) && (!item.category || match.categories.includes(item.category))) {
+      return match.image;
+    }
   }
 
-  if (item.variant === "toy") return ITEM_IMAGES.teddyBear;
-
-  switch (item.category) {
-    case "Электроника": return ITEM_IMAGES.airpods;
-    case "Документы": return ITEM_IMAGES.campusPass;
-    case "Книги": return ITEM_IMAGES.gradebook;
-    default: return null;
+  const description = typeof item.description === "string" ? item.description.normalize("NFKC") : "";
+  for (const match of ITEM_MATCHES) {
+    if (match.pattern.test(description) && (!item.category || match.categories.includes(item.category))) {
+      return match.image;
+    }
   }
+
+  return null;
 }

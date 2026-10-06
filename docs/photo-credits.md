@@ -9,11 +9,11 @@ third-party hosts at runtime.
 | `assets/seed/airpods.jpg` | AirPods | Wikimedia Commons / LWYang | CC BY 2.0 | [AirPods (2).jpg](https://commons.wikimedia.org/wiki/File:AirPods_(2).jpg) |
 | `assets/seed/student-pass-secondary.jpg` | Student ID | Wikimedia Commons / Gregori-luxair | CC BY-SA 4.0 | [European School of Luxembourg 1 student Identity Card](https://commons.wikimedia.org/wiki/File:European_School_of_Luxembourg_1_(ESL)_student_Identity_Card.jpg) |
 | `assets/seed/blue-scarf-crochet.jpg` | Blue scarf | Wikimedia Commons / 999real | CC BY-SA | [Crochet scarf in two shades of blue.jpg](https://commons.wikimedia.org/wiki/File:Crochet_scarf_in_two_shades_of_blue.jpg) |
-| `assets/seed/clean-architecture-book.jpg` | Book | Flickr / Wonderlane | CC BY 2.0 | [120 year old Bible back (American)](https://www.flickr.com/photos/71401718@N00/27703078) |
+| `assets/seed/clean-architecture-book.jpg` | Antique leather-bound book | Flickr / Wonderlane | CC BY 2.0 | [120 year old Bible back (American)](https://www.flickr.com/photos/71401718@N00/27703078) |
 | `assets/seed/gold-chain.jpg` | Gold chain | Flickr / TinyApartmentCrafts | CC BY 2.0 | [Purple and Gold Chain Necklace](https://www.flickr.com/photos/7573128@N06/5281415879) |
 | `assets/seed/teddy-bear.jpg` | Teddy bear | Wikimedia Commons / Marge Pärnits | CC0 | [Aukaru.jpg](https://commons.wikimedia.org/wiki/File:Aukaru.jpg) |
 | `assets/seed/gold-watch.jpg` | Gold watch | Wikimedia Commons / Charles J. Sharp | CC BY-SA 4.0 | [Patek Philippe Ellipse gold wristwatch.jpg](https://commons.wikimedia.org/wiki/File:Patek_Philippe_Ellipse_gold_wristwatch.jpg) |
-| `assets/seed/smartphone-green-case.jpg` | Smartphone with a case | Flickr / Tolbxela | CC BY 2.0 | [Sony Ericsson Mix Walkman with blue mesh hard case](https://www.flickr.com/photos/25147647@N04/11409335413) |
+| `assets/seed/smartphone-blue-case.jpg` | Smartphone with a blue case | Flickr / Tolbxela | CC BY 2.0 | [Sony Ericsson Mix Walkman with blue mesh hard case](https://www.flickr.com/photos/25147647@N04/11409335413) |
 | `assets/seed/plush-rabbit.jpg` | Plush rabbit | Flickr / COLORED PENCIL magazine | CC BY 2.0 | [February CPM Art Challenge Photo “Storytime”](https://www.flickr.com/photos/61446950@N06/16348326236) |
 | `assets/seed/powerbank.jpg` | Power bank | Flickr / CrazyDavePromo | CC BY 2.0 | [Power bank charger black rubberised with gold metal trim](https://www.flickr.com/photos/186142079@N08/49237022313) |
 | `assets/seed/gradebook.jpg` | University grade book | Wikimedia Commons / Antonix Wayfarer | CC BY-SA 3.0 | [Student grade book Ukraine.JPG](https://commons.wikimedia.org/wiki/File:Student_grade_book_Ukraine.JPG) |

@@ -6,8 +6,8 @@ import { buildSeedCards, SEED_VERSION } from "../js/seed-cards.js";
 
 const cards = buildSeedCards();
 
-test("seed version four contains forty sequential cards", () => {
-  assert.equal(SEED_VERSION, 4);
+test("seed version five contains forty sequential cards", () => {
+  assert.equal(SEED_VERSION, 5);
   assert.equal(cards.length, 40);
   assert.deepEqual(cards.map((card) => card.id), Array.from({ length: 40 }, (_, index) => `seed-${index + 1}`));
 });

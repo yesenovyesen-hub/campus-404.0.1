@@ -21,13 +21,17 @@ test("known item names resolve to matching local photographs", () => {
 test("item matching considers type, description, and category", () => {
   assert.equal(getItemImage({ type: "Зачётная книжка" }), "assets/seed/gradebook.jpg");
   assert.equal(getItemImage({ description: "Нашёл серебряные серьги у аудитории." }), "assets/seed/silver-earrings.jpg");
-  assert.equal(getItemImage({ category: "Электроника" }), "assets/seed/airpods.jpg");
-  assert.equal(getItemImage({ category: "Документы" }), "assets/seed/campus-pass.png");
-  assert.equal(getItemImage({ category: "Книги" }), "assets/seed/gradebook.jpg");
+  assert.equal(getItemImage({ title: "Серый худи", category: "Одежда" }), "assets/seed/gray-hoodie.jpg");
+  assert.equal(getItemImage({ title: "Серый худи", category: "Книги" }), null);
+  assert.equal(getItemImage({ category: "Электроника" }), null);
+  assert.equal(getItemImage({ category: "Документы" }), null);
+  assert.equal(getItemImage({ category: "Книги" }), null);
 });
 
 test("clothing without a matching item name keeps the icon placeholder", () => {
   assert.equal(getItemImage({ title: "Рюкзак с нашивкой", type: "Рюкзак", category: "Одежда" }), null);
+  assert.equal(getItemImage({ title: "Часы", type: "Часы", category: "Другое" }), null);
+  assert.equal(getItemImage({ title: "Плюшевый дракончик", variant: "toy" }), null);
 });
 
 test("user-provided image fields take precedence over automatic matching", () => {
@@ -85,4 +89,13 @@ test("all 40 seed cards have a distinct local photo", () => {
     assert.ok(existsSync(resolve(item.imageFile)), `${item.title}: ${item.imageFile}`);
     assert.equal(getItemImage(item), item.imageFile, item.title);
   }
+});
+
+test("every seed photo is listed in the photo credits", () => {
+  const credits = readFileSync(resolve("docs/photo-credits.md"), "utf8");
+  const creditedFiles = new Set(credits.split("\n")
+    .map((line) => line.split("|")[1]?.trim().replaceAll("`", ""))
+    .filter((path) => path?.startsWith("assets/seed/")));
+
+  for (const card of buildSeedCards()) assert.ok(creditedFiles.has(card.imageFile), card.imageFile);
 });

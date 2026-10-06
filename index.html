@@ -21,7 +21,7 @@
         <input id="search-input" type="search" placeholder="Найти вещь или место..." autocomplete="off">
         <kbd>/</kbd>
       </form>
-      <button class="avatar-button" id="header-profile" type="button" aria-label="Профиль"><span id="avatar-letter">?</span></button>
+      <button class="avatar-button" id="header-profile" type="button" aria-label="Профиль"><span id="avatar-letter">?</span><img id="header-avatar" alt="" hidden></button>
     </header>
 
     <main class="page-layout" id="app-view" tabindex="-1" aria-live="polite"></main>
@@ -36,7 +36,7 @@
     </footer>
 
     <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
-    <aside class="drawer glass-drawer glass" id="menu-drawer" aria-label="Меню" aria-hidden="true" inert hidden>
+    <aside class="drawer glass-drawer glass" id="menu-drawer" role="dialog" aria-modal="true" aria-label="Меню" aria-hidden="true" inert hidden>
       <div class="drawer-heading"><div><p class="eyebrow">НАВИГАЦИЯ</p><h2>Меню</h2></div><button class="icon-button" id="drawer-close" type="button" aria-label="Закрыть меню">×</button></div>
       <button class="edit-button" id="edit-button" type="button">✎ <span>Редактировать</span></button>
       <div class="filter-group">
@@ -57,7 +57,7 @@
 
     <dialog class="chat-modal glass add-dialog" id="chatModal" aria-labelledby="chatTitle">
       <div class="chat-shell">
-        <header class="chat-header"><div class="bot-avatar" aria-hidden="true">C4</div><div class="chat-heading"><strong id="chatTitle">Переписка</strong><span class="chat-online">Campus 404</span></div><button class="icon-button" id="chatClose" type="button" aria-label="Закрыть чат">×</button></header>
+        <header class="chat-header"><div class="bot-avatar" aria-hidden="true">C4</div><div class="chat-heading"><strong id="chatTitle">Переписка</strong><span class="chat-online">Campus 404</span></div><img class="chat-user-avatar" id="chat-user-avatar" alt="" hidden><button class="icon-button" id="chatClose" type="button" aria-label="Закрыть чат">×</button></header>
         <div class="chat-messages" id="chatMessages" aria-live="polite" aria-relevant="additions"></div>
         <div class="typing-indicator" id="typingIndicator" aria-live="polite" hidden>Собеседник печатает…</div>
         <form class="chat-composer" id="chatForm"><label class="visually-hidden" for="chatInput">Ваше сообщение</label><textarea id="chatInput" rows="1" maxlength="1000" placeholder="Напишите сообщение…"></textarea><button class="chat-send" id="chatSend" type="submit" aria-label="Отправить сообщение">➤</button></form>

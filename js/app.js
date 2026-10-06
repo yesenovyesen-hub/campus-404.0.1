@@ -61,7 +61,28 @@ function applyTheme() {
 
 function updateIdentity() {
   const name = store.getName();
-  document.querySelector("#avatar-letter").textContent = name ? [...name][0].toLocaleUpperCase("ru") : "?";
+  const letter = document.querySelector("#avatar-letter");
+  const avatar = store.getAvatar();
+  const headerAvatar = document.querySelector("#header-avatar");
+  letter.textContent = name ? [...name][0].toLocaleUpperCase("ru") : "?";
+  letter.hidden = Boolean(avatar);
+  headerAvatar.hidden = !avatar;
+  if (avatar) {
+    headerAvatar.src = avatar;
+    headerAvatar.alt = `Фото профиля ${name || "пользователя"}`;
+  } else {
+    headerAvatar.removeAttribute("src");
+    headerAvatar.alt = "";
+  }
+  const chatAvatar = document.querySelector("#chat-user-avatar");
+  chatAvatar.hidden = !avatar;
+  if (avatar) {
+    chatAvatar.src = avatar;
+    chatAvatar.alt = `Фото профиля ${name || "пользователя"}`;
+  } else {
+    chatAvatar.removeAttribute("src");
+    chatAvatar.alt = "";
+  }
 }
 
 function renderCategories() {
@@ -268,28 +289,27 @@ function renderAddPage() {
 }
 
 function renderSellPage() {
-  app.className = "page-layout sell-page";
-  const image = document.createElement("img");
-  image.id = "sell-meme";
-  image.alt = "Юмористическая иллюстрация о продаже найденной вещи";
-  fetch("assets/sell-meme.png")
-    .then((response) => {
-    if (!response.ok) throw new Error("Файл assets/sell-meme.png не найден.");
-    image.src = "assets/sell-meme.png";
-    })
-    .catch(() => {
-    image.hidden = true;
-    if (app.querySelector(".empty-state")) return;
-    const notice = element("p", "empty-state", "Изображение assets/sell-meme.png не найдено. Добавьте предоставленный файл, чтобы показать страницу продажи.");
-    app.insertBefore(notice, app.firstChild);
+    app.className = "page-layout sell-page";
+    const image = document.createElement("img");
+    image.id = "sell-meme";
+    image.alt = "Юмористическая иллюстрация о продаже найденной вещи";
+    image.addEventListener("error", () => {
+      if (!app.contains(image)) return;
+      image.hidden = true;
+      const notice = element("p", "empty-state", "Изображение assets/sell-meme.png не найдено. Добавьте предоставленный файл, чтобы показать страницу продажи.");
+      app.insertBefore(notice, app.firstChild);
     });
-  const back = element("a", "primary-button", "Назад");
+    image.src = "assets/sell-meme.png";
+    const back = element("a", "primary-button", "Назад");
   back.href = "#/add";
   app.append(image, back);
 }
 
 function renderEditor() {
   mountEditor(app, () => {
+    searchInput.value = "";
+    selectedCategory = "all";
+    updateCategorySelection();
     navigate("/");
     showToast("Находка опубликована");
   }, reportStorageError);
@@ -324,12 +344,80 @@ function renderProfile() {
   editName.type = "button";
   editName.addEventListener("click", openNameDialog);
   name.append(h2, editName);
+  const identity = element("div", "profile-identity");
+  const profileAvatar = element("div", "profile-avatar");
+  profileAvatar.setAttribute("aria-label", `Фото профиля ${store.getName() || "пользователя"}`);
+  const avatarImage = document.createElement("img");
+  avatarImage.alt = `Фото профиля ${store.getName() || "пользователя"}`;
+  const avatarLetter = element("span", "", store.getName() ? [...store.getName()][0].toLocaleUpperCase("ru") : "?");
+  const avatarActions = element("div", "avatar-actions");
+  const avatarInput = document.createElement("input");
+  avatarInput.type = "file";
+  avatarInput.accept = "image/jpeg,image/png,image/webp";
+  avatarInput.className = "visually-hidden";
+  avatarInput.id = "profile-avatar-input";
+  avatarInput.setAttribute("aria-label", "Выбрать фотографию профиля");
+  const chooseAvatar = element("button", "primary-button", store.getAvatar() ? "Изменить фото" : "Добавить фото");
+  chooseAvatar.type = "button";
+  chooseAvatar.addEventListener("click", () => avatarInput.click());
+  const removeAvatar = element("button", "text-button", "Удалить фотографию");
+  removeAvatar.type = "button";
+  removeAvatar.hidden = !store.getAvatar();
+  const avatarError = element("p", "avatar-error");
+  avatarError.setAttribute("role", "alert");
+  avatarInput.addEventListener("change", async () => {
+    avatarError.textContent = "";
+    const file = avatarInput.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressAvatar(file);
+      store.setAvatar(dataUrl);
+      avatarImage.src = dataUrl;
+      avatarImage.hidden = false;
+      avatarLetter.hidden = true;
+      chooseAvatar.textContent = "Изменить фото";
+      removeAvatar.hidden = false;
+      updateIdentity();
+    } catch (error) {
+      avatarError.textContent = error.message;
+      if (error.name === "QuotaExceededError") reportStorageError(error);
+    } finally {
+      avatarInput.value = "";
+    }
+  });
+  removeAvatar.addEventListener("click", () => {
+    try {
+      store.setAvatar(null);
+      avatarImage.removeAttribute("src");
+      avatarImage.hidden = true;
+      avatarLetter.hidden = false;
+      chooseAvatar.textContent = "Добавить фото";
+      removeAvatar.hidden = true;
+      avatarError.textContent = "";
+      updateIdentity();
+      chooseAvatar.focus();
+    } catch (error) {
+      avatarError.textContent = error.message;
+      reportStorageError(error);
+    }
+  });
+  if (store.getAvatar()) {
+    avatarImage.src = store.getAvatar();
+    avatarImage.hidden = false;
+    avatarLetter.hidden = true;
+  } else {
+    avatarImage.hidden = true;
+  }
+  profileAvatar.append(avatarImage, avatarLetter);
+  avatarActions.append(chooseAvatar, removeAvatar, avatarInput);
+  identity.append(profileAvatar, avatarActions);
+  profile.append(name, identity, avatarError);
   const owned = store.getItems().filter((item) => item.isOwn);
   const averages = owned.map((item) => store.getAverageRating(item.id)).filter((rating) => rating !== null);
   const average = averages.length ? averages.reduce((sum, rating) => sum + rating, 0) / averages.length : null;
   const stats = element("div", "profile-stats");
   stats.append(statCard("Мои находки", String(owned.length)), statCard("Средний рейтинг", average === null ? "—" : `★ ${average.toFixed(1)}`));
-  profile.append(name, stats, element("h2", "section-title", "Бонусная неделя"));
+  profile.append(stats, element("h2", "section-title", "Бонусная неделя"));
   const progress = getWeekProgress(store.getActivity());
   const dayNames = ["Пн", "Вт", "Ср", "Чт", "Пт"];
   const weekdays = element("div", "week-progress");
@@ -350,6 +438,48 @@ function renderProfile() {
   owned.forEach((item) => ownedList.append(element("p", "", `${item.title} · ${item.status}`)));
   profile.append(ownedList);
   app.append(profile);
+}
+
+function compressAvatar(file) {
+  const maxFileSize = 5 * 1024 * 1024;
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+  if (!allowedTypes.has(file.type)) {
+    return Promise.reject(new Error("Выберите изображение в формате JPEG, PNG или WebP."));
+  }
+  if (file.size > maxFileSize) {
+    return Promise.reject(new Error("Размер фотографии не должен превышать 5 МБ."));
+  }
+  if (file.size === 0) {
+    return Promise.reject(new Error("Выбранный файл пустой или повреждён."));
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Не удалось прочитать фотографию."));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error("Не удалось загрузить изображение. Выберите другой файл."));
+      image.onload = () => {
+        if (!image.width || !image.height) {
+          reject(new Error("Файл не содержит корректного изображения."));
+          return;
+        }
+        const scale = Math.min(1, 512 / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("Браузер не поддерживает обработку фотографии."));
+          return;
+        }
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function statCard(label, value) {
@@ -489,6 +619,22 @@ function closeDrawer() {
   drawerCloseTimeout = window.setTimeout(() => { drawer.hidden = true; }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250);
 }
 
+function keepDrawerFocus(event) {
+  if (event.key !== "Tab" || drawer.hidden || drawer.inert) return;
+  const focusable = [...drawer.querySelectorAll("a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")]
+    .filter((node) => node.getClientRects().length > 0);
+  if (!focusable.length) return;
+
+  const currentIndex = focusable.indexOf(document.activeElement);
+  const destination = event.shiftKey
+    ? (currentIndex <= 0 ? focusable.at(-1) : null)
+    : (currentIndex < 0 || currentIndex === focusable.length - 1 ? focusable[0] : null);
+  if (destination) {
+    event.preventDefault();
+    destination.focus();
+  }
+}
+
 const botResponses = [
   { keywords: ["привет", "здравствуй", "хай", "добрый", "hello", "hi"], answers: ["Привет! 👋 Рад, что вы откликнулись. Да, вещь ещё у меня.", "Здравствуйте! Да, я нашёл эту вещь и она пока у меня."] },
   { keywords: ["где", "место", "встрет", "забрать", "отдать"], answers: ["Можем встретиться в главном корпусе, у ресепшена. Вам удобно?", "Обычно я бываю в библиотеке на 2 этаже. Или можем договориться о другом месте."] },
@@ -584,6 +730,7 @@ function openNameDialog() {
 document.querySelector("#search-form").addEventListener("submit", (event) => event.preventDefault());
 searchInput.addEventListener("input", () => { if (!location.hash || location.hash === "#/") renderRoute(); });
 document.addEventListener("keydown", (event) => {
+  keepDrawerFocus(event);
   if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
     event.preventDefault();
     searchInput.focus();
