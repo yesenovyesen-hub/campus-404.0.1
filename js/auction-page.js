@@ -54,8 +54,20 @@ function makeAuctionCard(item, role, refresh) {
 
   const timer = document.createElement("p");
   timer.className = "auction-timer";
-  const endAt = Number(item.auctionEndAt || Date.now() + 60_000);
-  timer.textContent = `Осталось: ${getTimeRemaining(endAt)}`;
+  timer.dataset.lotId = item.id;
+  timer.dataset.endAt = String(Number(item.auctionEndAt || Date.now() + 60_000));
+  const syncTimer = () => {
+    const endAt = Number(timer.dataset.endAt || Date.now());
+    const remainingSeconds = getTimeRemaining(endAt);
+    if (["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(item.status || ""))) {
+      timer.textContent = item.status === "AUCTION_SOLD" ? "РАСПРОДАНО" : "Аукцион завершён";
+      timer.style.color = item.status === "AUCTION_SOLD" ? "red" : "";
+      return;
+    }
+    timer.textContent = String(remainingSeconds);
+    timer.style.color = "";
+  };
+  syncTimer();
 
   body.append(titleRow, details, timer);
 
@@ -231,6 +243,27 @@ function renderAuctionView(app, role) {
     grid.append(makeAuctionCard(item, role, () => renderAuctionView(app, role)));
   });
   app.append(grid);
+
+  const tickAuctionTimers = () => {
+    const timerNodes = grid.querySelectorAll(".auction-timer[data-lot-id]");
+    timerNodes.forEach((node) => {
+      const item = activeLots.find((lot) => lot.id === node.dataset.lotId);
+      if (!item) return;
+      const endAt = Number(item.auctionEndAt || Date.now());
+      node.dataset.endAt = String(endAt);
+      if (["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(item.status || ""))) {
+        node.textContent = item.status === "AUCTION_SOLD" ? "РАСПРОДАНО" : "Аукцион завершён";
+        node.style.color = item.status === "AUCTION_SOLD" ? "red" : "";
+        return;
+      }
+      node.textContent = String(getTimeRemaining(endAt));
+      node.style.color = "";
+    });
+  };
+  tickAuctionTimers();
+  if (!window.__campusAuctionTicker) {
+    window.__campusAuctionTicker = window.setInterval(tickAuctionTimers, 1000);
+  }
 }
 
 export function renderAuctionPage(app, role = "observer") {

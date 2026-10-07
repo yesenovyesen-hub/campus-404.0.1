@@ -25,10 +25,38 @@ function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const legacyChats = readLegacyChats();
-    if (!raw) return { items: [], chats: legacyChats, activity: [], userName: "", userAvatar: "", theme: "", unread: 0, auctionLots: [] };
+    if (!raw) {
+      return {
+        items: [],
+        chats: legacyChats,
+        activity: [],
+        userName: "",
+        userAvatar: "",
+        userEmail: "",
+        userPhone: "",
+        theme: "",
+        unread: 0,
+        auctionLots: [],
+        purchaseHistory: []
+      };
+    }
     const data = JSON.parse(raw);
     if (!data || !Array.isArray(data.items)) throw new Error("Некорректный формат сохранённых данных Campus 404.");
-    return { items: [], chats: legacyChats, activity: [], userName: "", userAvatar: "", theme: "", unread: 0, auctionLots: [], ...data, chats: { ...legacyChats, ...(data.chats || {}) } };
+    return {
+      items: [],
+      chats: legacyChats,
+      activity: [],
+      userName: "",
+      userAvatar: "",
+      userEmail: "",
+      userPhone: "",
+      theme: "",
+      unread: 0,
+      auctionLots: [],
+      purchaseHistory: [],
+      ...data,
+      chats: { ...legacyChats, ...(data.chats || {}) }
+    };
   } catch (error) {
     if (error instanceof SyntaxError) throw new Error("Не удалось прочитать сохранённые данные Campus 404.", { cause: error });
     throw error;
@@ -451,15 +479,10 @@ const DEMO_AUCTION_LOTS = [
 ];
 
 function createDemoAuctionLots(previousLots = []) {
-  const candidates = [...DEMO_AUCTION_LOTS];
-  for (let index = candidates.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    [candidates[index], candidates[randomIndex]] = [candidates[randomIndex], candidates[index]];
-  }
-  const count = Math.floor(Math.random() * 5) + 1;
   const now = Date.now();
   const previousById = new Map(previousLots.filter((lot) => lot?.auctionDemo).map((lot) => [lot.id, lot]));
-  return candidates.slice(0, count).map((lot) => ({
+  const selected = DEMO_AUCTION_LOTS.slice(0, 3);
+  return selected.map((lot) => ({
     ...lot,
     foundAt: previousById.get(lot.id)?.foundAt || lot.foundAt || new Date(now).toISOString(),
     createdAt: previousById.get(lot.id)?.createdAt || lot.createdAt || new Date(now).toISOString(),
@@ -467,14 +490,19 @@ function createDemoAuctionLots(previousLots = []) {
     auctionBidCount: previousById.get(lot.id)?.auctionBidCount ?? lot.auctionBidCount,
     auctionWinner: previousById.get(lot.id)?.auctionWinner ?? lot.auctionWinner,
     auctionStartAt: previousById.get(lot.id)?.auctionStartAt ?? now,
-    auctionEndAt: previousById.get(lot.id)?.auctionEndAt ?? now + 24 * 60 * 60 * 1000
+    auctionEndAt: previousById.get(lot.id)?.auctionEndAt ?? now + 30 * 1000,
+    status: previousById.get(lot.id)?.status || "AUCTION_ACTIVE",
+    auctionBidHistory: Array.isArray(previousById.get(lot.id)?.auctionBidHistory)
+      ? previousById.get(lot.id).auctionBidHistory.map((bid) => ({ ...bid }))
+      : (Number(lot.auctionBidCount || 0) > 0 ? [{ bidderName: lot.auctionWinner || "Али", amount: Number(lot.auctionCurrentPrice || 0), at: now }] : []),
+    auctionFinalPrice: previousById.get(lot.id)?.auctionFinalPrice ?? (Number(lot.auctionBidCount || 0) > 0 ? Number(lot.auctionCurrentPrice || 0) : 0)
   }));
 }
 
 function ensureDemoAuctionLots() {
-  const previousLots = state.auctionLots;
+  const previousLots = Array.isArray(state.auctionLots) ? state.auctionLots : [];
   const previousVersion = state.auctionDemoCatalogVersion;
-  state.auctionLots = createDemoAuctionLots(Array.isArray(previousLots) ? previousLots : []);
+  state.auctionLots = createDemoAuctionLots(previousLots);
   state.auctionDemoCatalogVersion = DEMO_AUCTION_CATALOG_VERSION;
   try {
     persist();
@@ -492,7 +520,6 @@ function markActivity(date = new Date()) {
 
 export const store = {
   getItems() { return state.items.map((item) => ({ ...item, ratings: (item.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) })); },
-  getAuctionLots() { return (state.auctionLots || []).map((lot) => ({ ...lot, ratings: (lot.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) })); },
   refreshAuctionData(rawData) {
     const data = JSON.parse(rawData);
     if (!data || !Array.isArray(data.items) || !Array.isArray(data.auctionLots)) {
@@ -520,6 +547,10 @@ export const store = {
   },
   setName(name) { const previous = state.userName; state.userName = name.trim(); try { persist(); } catch (error) { state.userName = previous; throw error; } },
   getName() { return state.userName; },
+  setEmail(email) { const previous = state.userEmail || ""; const next = String(email || "").trim(); state.userEmail = next; try { persist(); } catch (error) { state.userEmail = previous; throw error; } },
+  getEmail() { return state.userEmail || ""; },
+  setPhone(phone) { const previous = state.userPhone || ""; const next = String(phone || "").trim(); state.userPhone = next; try { persist(); } catch (error) { state.userPhone = previous; throw error; } },
+  getPhone() { return state.userPhone || ""; },
   getAvatar() {
     return typeof state.userAvatar === "string"
       && state.userAvatar.length <= MAX_AVATAR_LENGTH
@@ -547,15 +578,46 @@ export const store = {
   getUnread() { return state.unread; },
   setUnread(value) { const previous = state.unread; state.unread = Math.max(0, Number(value) || 0); try { persist(); } catch (error) { state.unread = previous; throw error; } },
   syncAuctionState(now = Date.now()) {
+    const finalizeLot = (lot) => {
+      if (!lot || !lot.id || !lot.auctionEndAt || !lot.status || ["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(lot.status))) return false;
+      const isActive = String(lot.status).trim() === "AUCTION_ACTIVE";
+      const endAt = Number(lot.auctionEndAt || 0);
+      if (!isActive || Number.isNaN(endAt) || now < endAt) return false;
+      const winner = String(lot.auctionWinner || "").trim();
+      const bids = Array.isArray(lot.auctionBidHistory) ? lot.auctionBidHistory : [];
+      const current = Number(lot.auctionCurrentPrice ?? lot.auctionStartPrice ?? 0);
+      const maxBid = bids.reduce((largest, bid) => Math.max(largest, Number(bid?.amount ?? 0)), current);
+      const winnerName = bids.length ? bids.reduce((best, bid) => (Number(bid?.amount ?? 0) > Number(best?.amount ?? 0) ? bid : best), bids[0])?.bidderName || winner : winner;
+      if (bids.length > 0 || Number(lot.auctionBidCount || 0) > 0) {
+        lot.auctionWinner = winnerName;
+        lot.auctionCurrentPrice = maxBid;
+        lot.auctionFinalPrice = maxBid;
+        lot.status = "AUCTION_SOLD";
+        const historyKey = `${lot.id}`;
+        if (!state.purchaseHistory.includes(winnerName)) state.purchaseHistory.push(winnerName);
+        if (!state.chats[historyKey]) state.chats[historyKey] = [];
+        const firstPurchase = state.purchaseHistory.filter((name) => name === winnerName).length === 1;
+        const systemMessage = firstPurchase
+          ? "Поздравляем с приобретенной вещью!\nВам предоставляется подарок в виде именной кофты, укажите ваш адрес доставки."
+          : "Поздравляем с приобретенной вещью!";
+        const hasSystemMessage = (state.chats[historyKey] || []).some((message) => message.text === systemMessage);
+        if (!hasSystemMessage) state.chats[historyKey].push({ sender: "bot", text: systemMessage });
+      } else {
+        lot.status = "AUCTION_EXPIRED";
+        lot.auctionWinner = "";
+        lot.auctionFinalPrice = 0;
+      }
+      return true;
+    };
+
     let changed = false;
     for (const item of state.items) {
       if (!item || !item.category || item.category === "Документы") continue;
       const normalized = String(item.status ?? "").trim();
       if (["Возвращено", "returned"].includes(normalized)) continue;
       const startTime = item.foundAt ? new Date(item.foundAt).getTime() : new Date(item.createdAt || Date.now()).getTime();
-      if (!Number.isFinite(startTime)) continue;
-      const auctionStartAt = startTime + 21 * 24 * 60 * 60 * 1000;
-      const auctionEndAt = auctionStartAt + 24 * 60 * 60 * 1000;
+      const auctionStartAt = Number(item.auctionStartAt ?? (Number.isFinite(startTime) ? startTime + 21 * 24 * 60 * 60 * 1000 : 0));
+      const auctionEndAt = Number(item.auctionEndAt ?? (auctionStartAt ? auctionStartAt + 30 * 1000 : 0));
       let nextStatus = normalized;
       if (now >= auctionEndAt) {
         nextStatus = Number(item.auctionBidCount || 0) > 0 ? "AUCTION_SOLD" : "AUCTION_EXPIRED";
@@ -564,10 +626,20 @@ export const store = {
       }
       if (nextStatus !== normalized) {
         item.status = nextStatus;
-        item.auctionStartAt = auctionStartAt;
-        item.auctionEndAt = auctionEndAt;
+        item.auctionStartAt = auctionStartAt || now;
+        item.auctionEndAt = auctionEndAt || now + 30 * 1000;
         changed = true;
       }
+      if (item.status === "AUCTION_ACTIVE" && now >= Number(item.auctionEndAt || 0)) {
+        const sold = Number(item.auctionBidCount || 0) > 0;
+        item.status = sold ? "AUCTION_SOLD" : "AUCTION_EXPIRED";
+        item.auctionWinner = sold ? (item.auctionWinner || "") : "";
+        item.auctionFinalPrice = sold ? Number(item.auctionCurrentPrice ?? 0) : 0;
+        changed = true;
+      }
+    }
+    for (const lot of state.auctionLots || []) {
+      if (finalizeLot(lot)) changed = true;
     }
     if (changed) {
       try { persist(); } catch (error) { throw error; }
@@ -575,37 +647,48 @@ export const store = {
     return changed;
   },
   getAuctionLots(now = Date.now()) {
-    const demoLots = (state.auctionLots || []).map((item) => ({
-      ...item,
-      image: item.image || item.imageFile || "",
-      auctionStartAt: Number(item.auctionStartAt ?? Date.now()),
-      auctionEndAt: Number(item.auctionEndAt ?? Date.now() + 24 * 60 * 60 * 1000),
-      auctionCurrentPrice: Number(item.auctionCurrentPrice ?? item.auctionStartPrice ?? 0),
-      auctionBidCount: Number(item.auctionBidCount || 0),
-      auctionBidIncrement: Number(item.auctionBidIncrement || 200),
-      auctionStartPrice: Number(item.auctionStartPrice ?? item.auctionCurrentPrice ?? 0)
-    }));
+    const normalized = (list = []) => (list || []).map((item) => {
+      if (!item) return item;
+      const auctionStartAt = Number(item.auctionStartAt ?? now);
+      const auctionEndAt = Number(item.auctionEndAt ?? now + 30 * 1000);
+      const auctionBidCount = Number(item.auctionBidCount || 0);
+      const auctionCurrentPrice = Number(item.auctionCurrentPrice ?? item.auctionStartPrice ?? 0);
+      const auctionStartPrice = Number(item.auctionStartPrice ?? item.startPrice ?? (auctionCurrentPrice || 0));
+      return {
+        ...item,
+        image: item.image || item.imageFile || "",
+        auctionStartAt,
+        auctionEndAt,
+        auctionCurrentPrice,
+        auctionBidCount,
+        auctionBidIncrement: Number(item.auctionBidIncrement || 200),
+        auctionStartPrice,
+        auctionWinner: item.auctionWinner || "",
+        status: String(item.status || "").trim() || "AUCTION_ACTIVE"
+      };
+    });
 
+    const demoLots = normalized(state.auctionLots).filter((item) => item && item.auctionDemo && !["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(item.status || "")));
     const regularLots = this.getItems().filter((item) => {
       if (!item || item.category === "Документы") return false;
       const status = String(item.status || "").trim();
-      const isLikelyAuction = ["AUCTION_ACTIVE", "AUCTION_SOLD", "AUCTION_EXPIRED", "AUCTION_FINISHED"].includes(status);
-      if (isLikelyAuction) return true;
       if (["Возвращено", "returned"].includes(status)) return false;
+      if (["AUCTION_ACTIVE"].includes(status)) return true;
       const startTime = item.foundAt ? new Date(item.foundAt).getTime() : new Date(item.createdAt || Date.now()).getTime();
       if (!Number.isFinite(startTime)) return false;
-      const auctionStartAt = startTime + 21 * 24 * 60 * 60 * 1000;
-      const auctionEndAt = auctionStartAt + 24 * 60 * 60 * 1000;
+      const auctionStartAt = Number(item.auctionStartAt ?? startTime + 21 * 24 * 60 * 60 * 1000);
+      const auctionEndAt = Number(item.auctionEndAt ?? auctionStartAt + 30 * 1000);
       return now >= auctionStartAt && now < auctionEndAt;
     }).map((item) => ({
       ...item,
       image: item.image || item.imageFile || "",
-      auctionStartAt: item.auctionStartAt || (item.foundAt ? new Date(item.foundAt).getTime() + 21 * 24 * 60 * 60 * 1000 : null),
-      auctionEndAt: item.auctionEndAt || ((item.foundAt ? new Date(item.foundAt).getTime() : Date.now()) + 21 * 24 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000),
+      auctionStartAt: Number(item.auctionStartAt ?? (item.foundAt ? new Date(item.foundAt).getTime() + 21 * 24 * 60 * 60 * 1000 : now)),
+      auctionEndAt: Number((item.auctionEndAt ?? ((item.foundAt ? new Date(item.foundAt).getTime() : now) + 21 * 24 * 60 * 60 * 1000)) + 30 * 1000),
       auctionCurrentPrice: Number(item.auctionCurrentPrice ?? item.startPrice ?? 0),
       auctionBidCount: Number(item.auctionBidCount || 0),
       auctionBidIncrement: Number(item.auctionBidIncrement || 200),
-      auctionStartPrice: Number(item.auctionStartPrice ?? item.startPrice ?? 0)
+      auctionStartPrice: Number(item.auctionStartPrice ?? item.startPrice ?? 0),
+      status: String(item.status || "").trim() || "AUCTION_ACTIVE"
     }));
 
     const seen = new Set();
@@ -627,9 +710,13 @@ export const store = {
     const item = demoLot || state.items.find((entry) => entry.id === id);
     if (!item) throw new Error("Лот не найден.");
     if (item.category === "Документы") throw new Error("Документы не участвуют в аукционе.");
+    if (["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(item.status || ""))) throw new Error("Аукцион для этого лота уже завершён.");
 
     const now = Date.now();
-    const current = Number(item.auctionCurrentPrice ?? item.auctionStartPrice ?? 0);
+    const currentBidHistory = Array.isArray(item.auctionBidHistory) ? item.auctionBidHistory : [];
+    const current = currentBidHistory.length
+      ? currentBidHistory.reduce((max, bid) => Math.max(max, Number(bid?.amount ?? 0)), Number(item.auctionCurrentPrice ?? item.auctionStartPrice ?? 0))
+      : Number(item.auctionCurrentPrice ?? item.auctionStartPrice ?? 0);
     const minimum = Number(item.auctionBidIncrement || 200);
     const nextAmount = Number(amount);
     if (!Number.isFinite(nextAmount) || nextAmount <= current) {
@@ -639,36 +726,19 @@ export const store = {
       throw new RangeError(`Минимальная ставка — ${current + minimum}.`);
     }
 
-    if (item.auctionDemo) {
-      const previous = {
-        status: item.status,
-        auctionCurrentPrice: item.auctionCurrentPrice,
-        auctionBidCount: item.auctionBidCount,
-        auctionWinner: item.auctionWinner,
-        auctionStartAt: item.auctionStartAt,
-        auctionEndAt: item.auctionEndAt
-      };
-      item.status = "AUCTION_ACTIVE";
-      item.auctionCurrentPrice = nextAmount;
-      item.auctionBidCount = Number(item.auctionBidCount || 0) + 1;
-      item.auctionWinner = bidderName;
-      item.auctionStartAt = Number(item.auctionStartAt ?? now);
-      item.auctionEndAt = Number(item.auctionEndAt ?? now + 24 * 60 * 60 * 1000);
-      try { persist(); } catch (error) { Object.assign(item, previous); throw error; }
-      return { ...item };
-    }
-
     const startTime = item.foundAt ? new Date(item.foundAt).getTime() : new Date(item.createdAt || Date.now()).getTime();
-    const auctionStartAt = startTime + 21 * 24 * 60 * 60 * 1000;
-    const auctionEndAt = auctionStartAt + 24 * 60 * 60 * 1000;
+    const auctionStartAt = Number(item.auctionStartAt ?? (Number.isFinite(startTime) ? startTime + 21 * 24 * 60 * 60 * 1000 : now));
+    const auctionEndAt = Number(item.auctionEndAt ?? (auctionStartAt + 30 * 1000));
     if (now < auctionStartAt || now > auctionEndAt) throw new Error("Ставки доступны только во время активного аукциона.");
+
     const previous = {
       status: item.status,
       auctionCurrentPrice: item.auctionCurrentPrice,
       auctionBidCount: item.auctionBidCount,
       auctionWinner: item.auctionWinner,
       auctionStartAt: item.auctionStartAt,
-      auctionEndAt: item.auctionEndAt
+      auctionEndAt: item.auctionEndAt,
+      auctionBidHistory: Array.isArray(item.auctionBidHistory) ? item.auctionBidHistory.map((bid) => ({ ...bid })) : []
     };
     item.status = "AUCTION_ACTIVE";
     item.auctionCurrentPrice = nextAmount;
@@ -676,8 +746,10 @@ export const store = {
     item.auctionWinner = bidderName;
     item.auctionStartAt = auctionStartAt;
     item.auctionEndAt = auctionEndAt;
+    item.auctionBidHistory = [...currentBidHistory, { bidderName, amount: nextAmount, at: now }];
+    item.auctionFinalPrice = nextAmount;
     try { persist(); } catch (error) { Object.assign(item, previous); throw error; }
-    return { ...item };
+    return { ...item, auctionBidHistory: item.auctionBidHistory.map((bid) => ({ ...bid })) };
   },
   addRating(id, rating) {
     const item = state.items.find((entry) => entry.id === id);

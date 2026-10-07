@@ -6,7 +6,7 @@ export const AUCTION_CATEGORY_CONFIG = Object.freeze({
 });
 
 export const AUCTION_READY_MS = 1 * 24 * 60 * 60 * 1000;
-export const AUCTION_ACTIVE_MS = 24 * 60 * 60 * 1000;
+export const AUCTION_ACTIVE_MS = 30 * 1000;
 
 export function getDefaultAvatar() {
   return "assets/default-profile-avatar.png";
@@ -80,16 +80,12 @@ export function computeAuctionState(item, now = Date.now()) {
 export function getActiveAuctionLots(items = [], now = Date.now()) {
   return (items || [])
     .map((item) => computeAuctionState(item, now))
-    .filter((item) => item.category !== "Документы" && ["AUCTION_ACTIVE", "AUCTION_SOLD", "AUCTION_EXPIRED"].includes(item.status));
+    .filter((item) => item.category !== "Документы" && item.status === "AUCTION_ACTIVE");
 }
 
 export function getTimeRemaining(endAt, now = Date.now()) {
   const diff = Math.max(0, Number(endAt || 0) - now);
-  const totalSeconds = Math.floor(diff / 1000);
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${hours}:${minutes}:${seconds}`;
+  return String(Math.ceil(diff / 1000));
 }
 
 export function isAuctionReady(item, now = Date.now()) {

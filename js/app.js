@@ -408,11 +408,9 @@ function renderChats() {
 
 function updateAuctionButtonState() {
   if (!auctionButton) return;
-  const activeLots = Array.isArray(store.getAuctionLots?.()) ? store.getAuctionLots() : getActiveAuctionLots(store.getItems());
-  const hasLots = activeLots.length > 0;
-  auctionButton.disabled = !hasLots;
-  auctionButton.classList.toggle("is-disabled", !hasLots);
-  auctionButton.setAttribute("aria-disabled", String(!hasLots));
+  auctionButton.disabled = false;
+  auctionButton.classList.remove("is-disabled");
+  auctionButton.setAttribute("aria-disabled", "false");
 }
 
 function renderProfile() {
@@ -496,6 +494,17 @@ function renderProfile() {
   avatarActions.append(chooseAvatar, removeAvatar, avatarInput);
   identity.append(profileAvatar, avatarActions);
   profile.append(name, identity, avatarError);
+  const contactBlock = element("div", "profile-contact-list");
+  const emailRow = element("div", "profile-contact");
+  const emailLabel = element("span", "", "Электронная почта");
+  const emailValue = element("strong", "", store.getEmail() || "—");
+  emailRow.append(emailLabel, emailValue);
+  const phoneRow = element("div", "profile-contact");
+  const phoneLabel = element("span", "", "Номер телефона");
+  const phoneValue = element("strong", "", store.getPhone() || "—");
+  phoneRow.append(phoneLabel, phoneValue);
+  contactBlock.append(emailRow, phoneRow);
+  profile.append(contactBlock);
   const owned = store.getItems().filter((item) => item.isOwn);
   const averages = owned.map((item) => store.getAverageRating(item.id)).filter((rating) => rating !== null);
   const average = averages.length ? averages.reduce((sum, rating) => sum + rating, 0) / averages.length : null;
