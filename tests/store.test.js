@@ -68,11 +68,18 @@ test("generates one to five distinct demo auction lots with matching local image
     lots.map(({ id, image }) => ({ id, image }))
   );
   const lot = lots[0];
-  store.placeAuctionBid(lot.id, lot.auctionCurrentPrice + lot.auctionBidIncrement, "Тест");
+  const nextBid = lot.auctionCurrentPrice + lot.auctionBidIncrement * 3;
+  store.placeAuctionBid(lot.id, nextBid, "Тест");
   const updatedLot = store.getAuctionLots().find((item) => item.id === lot.id);
   assert.equal(updatedLot.auctionBidCount, lot.auctionBidCount + 1);
+  assert.equal(updatedLot.auctionCurrentPrice, nextBid);
+  assert.equal(updatedLot.auctionWinner, "Тест");
   assert.equal(updatedLot.image, lot.image);
   assert.equal(updatedLot.auctionEndAt, lot.auctionEndAt);
+  const savedAuctionData = JSON.parse(values.get(STORAGE_KEY));
+  savedAuctionData.auctionLots.find((item) => item.id === lot.id).auctionCurrentPrice = nextBid + 1000;
+  store.refreshAuctionData(JSON.stringify(savedAuctionData));
+  assert.equal(store.getAuctionLots().find((item) => item.id === lot.id).auctionCurrentPrice, nextBid + 1000);
 });
 test("saving an item marks it as own and persists it", () => {
   store.setName("Алия");

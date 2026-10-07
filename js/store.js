@@ -493,6 +493,14 @@ function markActivity(date = new Date()) {
 export const store = {
   getItems() { return state.items.map((item) => ({ ...item, ratings: (item.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) })); },
   getAuctionLots() { return (state.auctionLots || []).map((lot) => ({ ...lot, ratings: (lot.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) })); },
+  refreshAuctionData(rawData) {
+    const data = JSON.parse(rawData);
+    if (!data || !Array.isArray(data.items) || !Array.isArray(data.auctionLots)) {
+      throw new Error("Некорректные данные аукциона в локальном хранилище.");
+    }
+    state.items = data.items;
+    state.auctionLots = data.auctionLots;
+  },
   getItem(id) { const item = state.items.find((entry) => entry.id === id); return item ? { ...item, ratings: (item.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) } : null; },
   saveItem(item, date = new Date()) {
     if (!item || !item.title?.trim() || !item.location?.trim() || !item.category) throw new TypeError("Для публикации нужны название, место и категория.");
@@ -632,13 +640,21 @@ export const store = {
     }
 
     if (item.auctionDemo) {
+      const previous = {
+        status: item.status,
+        auctionCurrentPrice: item.auctionCurrentPrice,
+        auctionBidCount: item.auctionBidCount,
+        auctionWinner: item.auctionWinner,
+        auctionStartAt: item.auctionStartAt,
+        auctionEndAt: item.auctionEndAt
+      };
       item.status = "AUCTION_ACTIVE";
       item.auctionCurrentPrice = nextAmount;
       item.auctionBidCount = Number(item.auctionBidCount || 0) + 1;
       item.auctionWinner = bidderName;
       item.auctionStartAt = Number(item.auctionStartAt ?? now);
       item.auctionEndAt = Number(item.auctionEndAt ?? now + 24 * 60 * 60 * 1000);
-      try { persist(); } catch (error) { throw error; }
+      try { persist(); } catch (error) { Object.assign(item, previous); throw error; }
       return { ...item };
     }
 
@@ -646,13 +662,21 @@ export const store = {
     const auctionStartAt = startTime + 21 * 24 * 60 * 60 * 1000;
     const auctionEndAt = auctionStartAt + 24 * 60 * 60 * 1000;
     if (now < auctionStartAt || now > auctionEndAt) throw new Error("Ставки доступны только во время активного аукциона.");
+    const previous = {
+      status: item.status,
+      auctionCurrentPrice: item.auctionCurrentPrice,
+      auctionBidCount: item.auctionBidCount,
+      auctionWinner: item.auctionWinner,
+      auctionStartAt: item.auctionStartAt,
+      auctionEndAt: item.auctionEndAt
+    };
     item.status = "AUCTION_ACTIVE";
     item.auctionCurrentPrice = nextAmount;
     item.auctionBidCount = Number(item.auctionBidCount || 0) + 1;
     item.auctionWinner = bidderName;
     item.auctionStartAt = auctionStartAt;
     item.auctionEndAt = auctionEndAt;
-    try { persist(); } catch (error) { throw error; }
+    try { persist(); } catch (error) { Object.assign(item, previous); throw error; }
     return { ...item };
   },
   addRating(id, rating) {

@@ -145,6 +145,40 @@
   cursor: pointer;
 }
 
+.auction-bid-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auction-bid-input-row input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--ink);
+}
+
+.auction-bid-input-row span,
+.auction-bid-preview {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.auction-bid-preview {
+  min-height: 1.5em;
+  margin: -8px 0 0;
+}
+
+.auction-bid-dialog::backdrop {
+  background: rgba(2, 10, 6, .63);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
 @media (max-width: 720px) {
   .auction-role-grid {
     grid-template-columns: 1fr;
