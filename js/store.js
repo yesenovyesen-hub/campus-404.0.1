@@ -480,29 +480,53 @@ const DEMO_AUCTION_LOTS = [
 
 function createDemoAuctionLots(previousLots = []) {
   const now = Date.now();
-  const previousById = new Map(previousLots.filter((lot) => lot?.auctionDemo).map((lot) => [lot.id, lot]));
-  const selected = DEMO_AUCTION_LOTS.slice(0, 3);
+  const normalizedPrevious = Array.isArray(previousLots) ? previousLots.filter((lot) => lot && lot.auctionDemo) : [];
+  const livePrevious = normalizedPrevious.filter((lot) => {
+    const endAt = Number(lot.auctionEndAt ?? 0);
+    return Number.isFinite(endAt) && endAt > now && !["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(lot.status || ""));
+  });
+
+  if (livePrevious.length) {
+    return livePrevious.map((lot) => ({
+      ...lot,
+      status: String(lot.status || "AUCTION_ACTIVE").trim() || "AUCTION_ACTIVE",
+      auctionStartAt: Number(lot.auctionStartAt ?? now),
+      auctionEndAt: Number(lot.auctionEndAt ?? now + 30 * 1000),
+      auctionCurrentPrice: Number(lot.auctionCurrentPrice ?? lot.auctionStartPrice ?? 0),
+      auctionBidCount: Number(lot.auctionBidCount || 0),
+      auctionBidIncrement: Number(lot.auctionBidIncrement || 200),
+      auctionStartPrice: Number(lot.auctionStartPrice ?? lot.auctionCurrentPrice ?? 0),
+      auctionWinner: lot.auctionWinner || "",
+      auctionBidHistory: Array.isArray(lot.auctionBidHistory) ? lot.auctionBidHistory.map((bid) => ({ ...bid })) : []
+    }));
+  }
+
+  const count = 1 + Math.floor(Math.random() * 5);
+  const usedIds = new Set(normalizedPrevious.map((lot) => lot.id).filter(Boolean));
+  const pool = DEMO_AUCTION_LOTS.filter((lot) => !usedIds.has(lot.id));
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const selected = shuffled.slice(0, Math.min(count, shuffled.length));
+
   return selected.map((lot) => ({
     ...lot,
-    foundAt: previousById.get(lot.id)?.foundAt || lot.foundAt || new Date(now).toISOString(),
-    createdAt: previousById.get(lot.id)?.createdAt || lot.createdAt || new Date(now).toISOString(),
-    auctionCurrentPrice: previousById.get(lot.id)?.auctionCurrentPrice ?? lot.auctionCurrentPrice,
-    auctionBidCount: previousById.get(lot.id)?.auctionBidCount ?? lot.auctionBidCount,
-    auctionWinner: previousById.get(lot.id)?.auctionWinner ?? lot.auctionWinner,
-    auctionStartAt: previousById.get(lot.id)?.auctionStartAt ?? now,
-    auctionEndAt: previousById.get(lot.id)?.auctionEndAt ?? now + 30 * 1000,
-    status: previousById.get(lot.id)?.status || "AUCTION_ACTIVE",
-    auctionBidHistory: Array.isArray(previousById.get(lot.id)?.auctionBidHistory)
-      ? previousById.get(lot.id).auctionBidHistory.map((bid) => ({ ...bid }))
-      : (Number(lot.auctionBidCount || 0) > 0 ? [{ bidderName: lot.auctionWinner || "Али", amount: Number(lot.auctionCurrentPrice || 0), at: now }] : []),
-    auctionFinalPrice: previousById.get(lot.id)?.auctionFinalPrice ?? (Number(lot.auctionBidCount || 0) > 0 ? Number(lot.auctionCurrentPrice || 0) : 0)
+    foundAt: new Date(now).toISOString(),
+    createdAt: new Date(now).toISOString(),
+    status: "AUCTION_ACTIVE",
+    auctionStartAt: now,
+    auctionEndAt: now + 30 * 1000,
+    auctionCurrentPrice: Number(lot.auctionCurrentPrice ?? lot.auctionStartPrice ?? 0),
+    auctionBidCount: Number(lot.auctionBidCount || 0),
+    auctionWinner: lot.auctionWinner || "",
+    auctionBidHistory: Number(lot.auctionBidCount || 0) > 0 ? [{ bidderName: lot.auctionWinner || "Али", amount: Number(lot.auctionCurrentPrice || 0), at: now }] : []
   }));
 }
 
 function ensureDemoAuctionLots() {
   const previousLots = Array.isArray(state.auctionLots) ? state.auctionLots : [];
   const previousVersion = state.auctionDemoCatalogVersion;
-  state.auctionLots = createDemoAuctionLots(previousLots);
+  const nextLots = createDemoAuctionLots(previousLots);
+  if (!nextLots.length) return;
+  state.auctionLots = nextLots;
   state.auctionDemoCatalogVersion = DEMO_AUCTION_CATALOG_VERSION;
   try {
     persist();
@@ -647,6 +671,13 @@ export const store = {
     return changed;
   },
   getAuctionLots(now = Date.now()) {
+    const currentLots = Array.isArray(state.auctionLots) ? state.auctionLots : [];
+    const activeDemoLots = currentLots.filter((item) => item && item.auctionDemo && Number(item.auctionEndAt ?? 0) > now && !["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(item.status || "")));
+    if (!activeDemoLots.length) {
+      state.auctionLots = createDemoAuctionLots(currentLots, now);
+      try { persist(); } catch (error) { throw error; }
+    }
+
     const normalized = (list = []) => (list || []).map((item) => {
       if (!item) return item;
       const auctionStartAt = Number(item.auctionStartAt ?? now);
@@ -668,7 +699,7 @@ export const store = {
       };
     });
 
-    const demoLots = normalized(state.auctionLots).filter((item) => item && item.auctionDemo && !["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(item.status || "")));
+    const demoLots = normalized(state.auctionLots).filter((item) => item && item.auctionDemo && Number(item.auctionEndAt ?? 0) > now && !["AUCTION_SOLD", "AUCTION_EXPIRED"].includes(String(item.status || "")));
     const regularLots = this.getItems().filter((item) => {
       if (!item || item.category === "Документы") return false;
       const status = String(item.status || "").trim();

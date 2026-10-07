@@ -408,9 +408,11 @@ function renderChats() {
 
 function updateAuctionButtonState() {
   if (!auctionButton) return;
-  auctionButton.disabled = false;
-  auctionButton.classList.remove("is-disabled");
-  auctionButton.setAttribute("aria-disabled", "false");
+  const activeLots = Array.isArray(store.getAuctionLots?.()) ? store.getAuctionLots() : getActiveAuctionLots(store.getItems());
+  const hasLots = activeLots.length > 0;
+  auctionButton.disabled = !hasLots;
+  auctionButton.classList.toggle("is-disabled", !hasLots);
+  auctionButton.setAttribute("aria-disabled", String(!hasLots));
 }
 
 function renderProfile() {
