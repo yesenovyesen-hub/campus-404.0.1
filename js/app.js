@@ -1,5 +1,7 @@
 import { CATEGORIES, REWARDS, REQUIRED_ACTIVE_DAYS } from "./constants.js";
 import { getChatReply } from "./chat-replies.js";
+import { renderAuctionPage } from "./auction-page.js";
+import { getDefaultAvatar, getActiveAuctionLots } from "./auction.js";
 import { renderEditor as mountEditor } from "./editor.js";
 import { createCardImage, initImagePicker } from "./image-upload.js";
 import { getPersona } from "./personas.js";
@@ -17,6 +19,7 @@ const chatInput = document.querySelector("#chatInput");
 const chatSend = document.querySelector("#chatSend");
 const typingIndicator = document.querySelector("#typingIndicator");
 const categoryOptions = document.querySelector("#category-options");
+const auctionButton = document.querySelector("#auction-button");
 const toastTimeout = { id: 0 };
 let activeItem = null;
 let activeHistory = [];
@@ -64,7 +67,7 @@ function applyTheme() {
 function updateIdentity() {
   const name = store.getName();
   const letter = document.querySelector("#avatar-letter");
-  const avatar = store.getAvatar();
+  const avatar = store.getAvatar() || getDefaultAvatar();
   const headerAvatar = document.querySelector("#header-avatar");
   letter.textContent = name ? [...name][0].toLocaleUpperCase("ru") : "?";
   letter.hidden = Boolean(avatar);
@@ -305,7 +308,7 @@ function renderFeed() {
   app.className = "page-layout feed-page";
   const heading = element("div", "content-topline");
   const title = element("div");
-  title.append(element("p", "eyebrow", "БЮРО НАХОДОК · КОРПУС А"));
+  title.append(element("p", "eyebrow", "БЮРО НАХОДОК ·It STEP"));
   const h1 = element("h1");
   h1.append(document.createTextNode("Потерялось? "), element("span", "", "Найдётся."));
   title.append(h1);
@@ -386,6 +389,15 @@ function renderChats() {
   app.append(list);
 }
 
+function updateAuctionButtonState() {
+  if (!auctionButton) return;
+  const activeLots = getActiveAuctionLots(store.getItems());
+  const hasLots = activeLots.length > 0;
+  auctionButton.disabled = !hasLots;
+  auctionButton.classList.toggle("is-disabled", !hasLots);
+  auctionButton.setAttribute("aria-disabled", String(!hasLots));
+}
+
 function renderProfile() {
   app.className = "page-layout subpage";
   app.append(element("p", "eyebrow", "ВАШ CAMPUS 404"), element("h1", "", "Профиль"));
@@ -402,6 +414,7 @@ function renderProfile() {
   const avatarImage = document.createElement("img");
   avatarImage.alt = `Фото профиля ${store.getName() || "пользователя"}`;
   const avatarLetter = element("span", "", store.getName() ? [...store.getName()][0].toLocaleUpperCase("ru") : "?");
+  const defaultAvatar = getDefaultAvatar();
   const avatarActions = element("div", "avatar-actions");
   const avatarInput = document.createElement("input");
   avatarInput.type = "file";
@@ -458,7 +471,9 @@ function renderProfile() {
     avatarImage.hidden = false;
     avatarLetter.hidden = true;
   } else {
-    avatarImage.hidden = true;
+    avatarImage.src = defaultAvatar;
+    avatarImage.hidden = false;
+    avatarLetter.hidden = true;
   }
   profileAvatar.append(avatarImage, avatarLetter);
   avatarActions.append(chooseAvatar, removeAvatar, avatarInput);
@@ -622,9 +637,10 @@ function navigate(path) {
 }
 
 function renderRoute() {
+  store.syncAuctionState();
   const route = decodeURIComponent(location.hash.replace(/^#\/?/, ""));
   updateNavigationState(route);
-  searchInput.hidden = route !== "" && route !== "/";
+  searchInput.hidden = route !== "" && route !== "/" && route !== "auction" && !route.startsWith("auction/");
   app.replaceChildren();
   if (route === "" || route === "/") renderFeed();
   else if (route === "add") renderAddPage();
@@ -632,10 +648,12 @@ function renderRoute() {
   else if (route === "edit") renderEditor();
   else if (route === "chats") renderChats();
   else if (route === "profile") renderProfile();
+  else if (route === "auction" || route === "auction/observer" || route === "auction/bidder") renderAuctionPage(app, route.split("/").at(-1) === "bidder" ? "bidder" : "observer");
   else if (route.startsWith("review/")) renderReview(route.slice("review/".length));
   else navigate("/");
   updateIdentity();
   updateUnreadBadge();
+  updateAuctionButtonState();
 }
 
 function updateUnreadBadge() {

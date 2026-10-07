@@ -210,9 +210,9 @@
 }
 .item-card[data-category="Книги"] { background: #51402f; }
 .item-card[data-category="Другое"] {
-  background: linear-gradient(120deg, #fff 0%, #ff8a00 50%, #fff 100%);
-  background-size: 250% 250%;
-  animation: other-card-flow 5s ease-in-out infinite;
+  background: linear-gradient(120deg, #fff 0%, #f6b76a 46%, #fff 100%);
+  background-size: 220% 220%;
+  animation: other-card-flow 6s ease-in-out infinite;
 }
 
 :root[data-theme="light"] .item-card[data-category="Электроника"] { background: #e5e7eb; }

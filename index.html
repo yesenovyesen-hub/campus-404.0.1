@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/glass.css">
     <link rel="stylesheet" href="css/cards.css">
+    <link rel="stylesheet" href="css/auction.css">
     <script type="module" src="js/app.js"></script>
   </head>
   <body>
@@ -21,7 +22,10 @@
         <input id="search-input" type="search" placeholder="Найти вещь или место..." autocomplete="off">
         <kbd>/</kbd>
       </form>
-      <button class="avatar-button" id="header-profile" type="button" aria-label="Профиль"><span id="avatar-letter">?</span><img id="header-avatar" alt="" hidden></button>
+      <div class="header-actions">
+        <button class="auction-button" id="auction-button" type="button" data-route="auction" aria-label="Аукцион">Аукцион</button>
+        <button class="avatar-button" id="header-profile" type="button" aria-label="Профиль"><span id="avatar-letter">?</span><img id="header-avatar" alt="" hidden></button>
+      </div>
     </header>
 
     <main class="page-layout" id="app-view" tabindex="-1" aria-live="polite"></main>
