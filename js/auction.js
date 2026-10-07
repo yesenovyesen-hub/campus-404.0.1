@@ -5,7 +5,7 @@ export const AUCTION_CATEGORY_CONFIG = Object.freeze({
   Другое: { startPrice: 2000, bidIncrement: 200 }
 });
 
-export const AUCTION_READY_MS = 21 * 24 * 60 * 60 * 1000;
+export const AUCTION_READY_MS = 1 * 24 * 60 * 60 * 1000;
 export const AUCTION_ACTIVE_MS = 24 * 60 * 60 * 1000;
 
 export function getDefaultAvatar() {

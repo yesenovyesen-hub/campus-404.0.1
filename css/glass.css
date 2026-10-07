@@ -10,6 +10,8 @@
   position: fixed;
   transform: translateX(calc(-100% - 24px));
   transition: transform .24s ease;
+  background: var(--sidebar-bg);
+  color: var(--text-primary);
 }
 
 .glass-drawer.is-open { transform: translateX(0); }

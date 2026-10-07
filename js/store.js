@@ -25,10 +25,10 @@ function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const legacyChats = readLegacyChats();
-    if (!raw) return { items: [], chats: legacyChats, activity: [], userName: "", userAvatar: "", theme: "", unread: 0 };
+    if (!raw) return { items: [], chats: legacyChats, activity: [], userName: "", userAvatar: "", theme: "", unread: 0, auctionLots: [] };
     const data = JSON.parse(raw);
     if (!data || !Array.isArray(data.items)) throw new Error("Некорректный формат сохранённых данных Campus 404.");
-    return { items: [], chats: legacyChats, activity: [], userName: "", userAvatar: "", theme: "", unread: 0, ...data, chats: { ...legacyChats, ...(data.chats || {}) } };
+    return { items: [], chats: legacyChats, activity: [], userName: "", userAvatar: "", theme: "", unread: 0, auctionLots: [], ...data, chats: { ...legacyChats, ...(data.chats || {}) } };
   } catch (error) {
     if (error instanceof SyntaxError) throw new Error("Не удалось прочитать сохранённые данные Campus 404.", { cause: error });
     throw error;
@@ -41,6 +41,450 @@ function persist() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+const DEMO_AUCTION_CATALOG_VERSION = 2;
+const DEMO_AUCTION_LOTS = [
+  {
+    id: "auction-demo-headphones",
+    title: "Беспроводные наушники",
+    category: "Электроника",
+    type: "Электроника",
+    description: "Аккуратные беспроводные наушники, готовы к использованию.",
+    location: "Корпус Б, холл",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/airpods.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 5000,
+    auctionCurrentPrice: 5000,
+    auctionBidIncrement: 500,
+    auctionBidCount: 3,
+    auctionWinner: "Али",
+    foundAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    ratings: []
+  },
+  {
+    id: "auction-demo-over-ear-headphones",
+    title: "Наушники с оголовьем",
+    category: "Электроника",
+    type: "Наушники",
+    description: "Накладные наушники в хорошем состоянии.",
+    location: "Медиатека",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/over-ear-headphones.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 5000,
+    auctionCurrentPrice: 5000,
+    auctionBidIncrement: 500,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-smartphone",
+    title: "Смартфон в красном чехле",
+    category: "Электроника",
+    type: "Смартфон",
+    description: "Смартфон в красном защитном чехле.",
+    location: "Коворкинг, 1 этаж",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/smartphone-red-case.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 5000,
+    auctionCurrentPrice: 5000,
+    auctionBidIncrement: 500,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-power-bank",
+    title: "Пауэрбанк",
+    category: "Электроника",
+    type: "Внешний аккумулятор",
+    description: "Компактный внешний аккумулятор с кабелем.",
+    location: "Аудитория 118",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/powerbank.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 5000,
+    auctionCurrentPrice: 5000,
+    auctionBidIncrement: 500,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-memory-card",
+    title: "Карта памяти",
+    category: "Электроника",
+    type: "Карта памяти",
+    description: "Карта памяти в защитном футляре.",
+    location: "Компьютерный класс",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/memory-card.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 5000,
+    auctionCurrentPrice: 5000,
+    auctionBidIncrement: 500,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-backpack",
+    title: "Рюкзак",
+    category: "Одежда",
+    type: "Рюкзак",
+    description: "Вместительный рюкзак с несколькими отделениями.",
+    location: "Главный корпус",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/backpack.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-hoodie",
+    title: "Серый худи",
+    category: "Одежда",
+    type: "Худи",
+    description: "Серый худи среднего размера, без повреждений.",
+    location: "Аудитория 204",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/gray-hoodie.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2200,
+    auctionBidIncrement: 200,
+    auctionBidCount: 2,
+    auctionWinner: "Марина",
+    foundAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+    ratings: []
+  },
+  {
+    id: "auction-demo-scarf",
+    title: "Синий шарф",
+    category: "Одежда",
+    type: "Шарф",
+    description: "Тёплый вязаный шарф насыщенного синего цвета.",
+    location: "Холл, корпус Б",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/blue-scarf.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-gloves",
+    title: "Чёрные перчатки",
+    category: "Одежда",
+    type: "Перчатки",
+    description: "Пара тёплых чёрных перчаток.",
+    location: "Раздевалка спортзала",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/black-gloves-pair.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-umbrella",
+    title: "Зонт",
+    category: "Другое",
+    type: "Зонт",
+    description: "Складной зонт с чехлом.",
+    location: "Вход в корпус А",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/closed-umbrella.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-book",
+    title: "Учебник",
+    category: "Книги",
+    type: "Книги",
+    description: "Учебник по математике, почти новый.",
+    location: "Библиотека, второй этаж",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/biology-survey-book.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 1000,
+    auctionCurrentPrice: 1100,
+    auctionBidIncrement: 100,
+    auctionBidCount: 1,
+    auctionWinner: "Данил",
+    foundAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
+    ratings: []
+  },
+  {
+    id: "auction-demo-architecture-book",
+    title: "Книга по архитектуре ПО",
+    category: "Книги",
+    type: "Книга",
+    description: "Книга по проектированию программных систем.",
+    location: "Читальный зал",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/clean-architecture-book.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 1000,
+    auctionCurrentPrice: 1000,
+    auctionBidIncrement: 100,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-planner",
+    title: "Ежедневник",
+    category: "Книги",
+    type: "Планер",
+    description: "Небольшой ежедневник с чистыми страницами.",
+    location: "Аудитория 302",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/daily-planner.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 1000,
+    auctionCurrentPrice: 1000,
+    auctionBidIncrement: 100,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-notebook",
+    title: "Лекционная тетрадь",
+    category: "Книги",
+    type: "Тетрадь",
+    description: "Тетрадь с записями лекций.",
+    location: "Лекционный зал",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/lecture-notebook.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 1000,
+    auctionCurrentPrice: 1000,
+    auctionBidIncrement: 100,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-mug",
+    title: "Термокружка",
+    category: "Другое",
+    type: "Кружка",
+    description: "Термокружка с крышкой для напитков.",
+    location: "Столовая",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/thermal-travel-mug.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-wallet",
+    title: "Кожаный кошелёк",
+    category: "Другое",
+    type: "Кошелёк",
+    description: "Кожаный кошелёк без документов и наличных.",
+    location: "Холл главного корпуса",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/leather-wallet.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-guitar",
+    title: "Акустическая гитара",
+    category: "Другое",
+    type: "Музыкальный инструмент",
+    description: "Акустическая гитара в хорошем состоянии.",
+    location: "Актовый зал",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/acoustic-guitar.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-skateboard",
+    title: "Скейтборд",
+    category: "Другое",
+    type: "Спортивный инвентарь",
+    description: "Скейтборд с целой декой и колёсами.",
+    location: "Спортивная площадка",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/skateboard.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-tennis-racket",
+    title: "Теннисная ракетка",
+    category: "Другое",
+    type: "Спортивный инвентарь",
+    description: "Теннисная ракетка с защитным чехлом.",
+    location: "Спортзал",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/tennis-racket.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-fountain-pen",
+    title: "Перьевая ручка",
+    category: "Другое",
+    type: "Ручка",
+    description: "Перьевая ручка в индивидуальном футляре.",
+    location: "Аудитория 205",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/parker-fountain-pen.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  },
+  {
+    id: "auction-demo-glasses-case",
+    title: "Футляр для очков",
+    category: "Другое",
+    type: "Аксессуар",
+    description: "Жёсткий футляр для хранения очков.",
+    location: "Кабинет 114",
+    ownerName: "Campus 404",
+    status: "AUCTION_ACTIVE",
+    isOwn: false,
+    image: "assets/seed/eyeglasses-case.jpg",
+    auctionDemo: true,
+    auctionStartPrice: 2000,
+    auctionCurrentPrice: 2000,
+    auctionBidIncrement: 200,
+    auctionBidCount: 0,
+    auctionWinner: "",
+    ratings: []
+  }
+];
+
+function createDemoAuctionLots(previousLots = []) {
+  const candidates = [...DEMO_AUCTION_LOTS];
+  for (let index = candidates.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [candidates[index], candidates[randomIndex]] = [candidates[randomIndex], candidates[index]];
+  }
+  const count = Math.floor(Math.random() * 5) + 1;
+  const now = Date.now();
+  const previousById = new Map(previousLots.filter((lot) => lot?.auctionDemo).map((lot) => [lot.id, lot]));
+  return candidates.slice(0, count).map((lot) => ({
+    ...lot,
+    foundAt: previousById.get(lot.id)?.foundAt || lot.foundAt || new Date(now).toISOString(),
+    createdAt: previousById.get(lot.id)?.createdAt || lot.createdAt || new Date(now).toISOString(),
+    auctionCurrentPrice: previousById.get(lot.id)?.auctionCurrentPrice ?? lot.auctionCurrentPrice,
+    auctionBidCount: previousById.get(lot.id)?.auctionBidCount ?? lot.auctionBidCount,
+    auctionWinner: previousById.get(lot.id)?.auctionWinner ?? lot.auctionWinner,
+    auctionStartAt: previousById.get(lot.id)?.auctionStartAt ?? now,
+    auctionEndAt: previousById.get(lot.id)?.auctionEndAt ?? now + 24 * 60 * 60 * 1000
+  }));
+}
+
+function ensureDemoAuctionLots() {
+  const previousLots = state.auctionLots;
+  const previousVersion = state.auctionDemoCatalogVersion;
+  state.auctionLots = createDemoAuctionLots(Array.isArray(previousLots) ? previousLots : []);
+  state.auctionDemoCatalogVersion = DEMO_AUCTION_CATALOG_VERSION;
+  try {
+    persist();
+  } catch (error) {
+    state.auctionLots = previousLots;
+    state.auctionDemoCatalogVersion = previousVersion;
+    throw error;
+  }
+}
+
 function markActivity(date = new Date()) {
   const key = getLocalDateKey(date);
   if (!state.activity.includes(key)) state.activity.push(key);
@@ -48,6 +492,7 @@ function markActivity(date = new Date()) {
 
 export const store = {
   getItems() { return state.items.map((item) => ({ ...item, ratings: (item.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) })); },
+  getAuctionLots() { return (state.auctionLots || []).map((lot) => ({ ...lot, ratings: (lot.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) })); },
   getItem(id) { const item = state.items.find((entry) => entry.id === id); return item ? { ...item, ratings: (item.ratings || []).map((rating) => ({ ...rating, images: [...(rating.images || [])] })) } : null; },
   saveItem(item, date = new Date()) {
     if (!item || !item.title?.trim() || !item.location?.trim() || !item.category) throw new TypeError("Для публикации нужны название, место и категория.");
@@ -122,7 +567,18 @@ export const store = {
     return changed;
   },
   getAuctionLots(now = Date.now()) {
-    return this.getItems().filter((item) => {
+    const demoLots = (state.auctionLots || []).map((item) => ({
+      ...item,
+      image: item.image || item.imageFile || "",
+      auctionStartAt: Number(item.auctionStartAt ?? Date.now()),
+      auctionEndAt: Number(item.auctionEndAt ?? Date.now() + 24 * 60 * 60 * 1000),
+      auctionCurrentPrice: Number(item.auctionCurrentPrice ?? item.auctionStartPrice ?? 0),
+      auctionBidCount: Number(item.auctionBidCount || 0),
+      auctionBidIncrement: Number(item.auctionBidIncrement || 200),
+      auctionStartPrice: Number(item.auctionStartPrice ?? item.auctionCurrentPrice ?? 0)
+    }));
+
+    const regularLots = this.getItems().filter((item) => {
       if (!item || item.category === "Документы") return false;
       const status = String(item.status || "").trim();
       const isLikelyAuction = ["AUCTION_ACTIVE", "AUCTION_SOLD", "AUCTION_EXPIRED", "AUCTION_FINISHED"].includes(status);
@@ -135,6 +591,7 @@ export const store = {
       return now >= auctionStartAt && now < auctionEndAt;
     }).map((item) => ({
       ...item,
+      image: item.image || item.imageFile || "",
       auctionStartAt: item.auctionStartAt || (item.foundAt ? new Date(item.foundAt).getTime() + 21 * 24 * 60 * 60 * 1000 : null),
       auctionEndAt: item.auctionEndAt || ((item.foundAt ? new Date(item.foundAt).getTime() : Date.now()) + 21 * 24 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000),
       auctionCurrentPrice: Number(item.auctionCurrentPrice ?? item.startPrice ?? 0),
@@ -142,16 +599,28 @@ export const store = {
       auctionBidIncrement: Number(item.auctionBidIncrement || 200),
       auctionStartPrice: Number(item.auctionStartPrice ?? item.startPrice ?? 0)
     }));
+
+    const seen = new Set();
+    const seenTitles = new Set();
+    const seenImages = new Set();
+    return [...demoLots, ...regularLots].filter((item) => {
+      if (!item || !item.id || seen.has(item.id)) return false;
+      const title = String(item.title || "").trim().toLocaleLowerCase("ru");
+      const image = String(item.image || "").trim();
+      if (!title || !image || seenTitles.has(title) || seenImages.has(image)) return false;
+      seen.add(item.id);
+      seenTitles.add(title);
+      seenImages.add(image);
+      return true;
+    });
   },
   placeAuctionBid(id, amount, bidderName = "Гость") {
-    const item = state.items.find((entry) => entry.id === id);
+    const demoLot = Array.isArray(state.auctionLots) ? state.auctionLots.find((entry) => entry.id === id) : null;
+    const item = demoLot || state.items.find((entry) => entry.id === id);
     if (!item) throw new Error("Лот не найден.");
     if (item.category === "Документы") throw new Error("Документы не участвуют в аукционе.");
-    const startTime = item.foundAt ? new Date(item.foundAt).getTime() : new Date(item.createdAt || Date.now()).getTime();
-    const auctionStartAt = startTime + 21 * 24 * 60 * 60 * 1000;
-    const auctionEndAt = auctionStartAt + 24 * 60 * 60 * 1000;
+
     const now = Date.now();
-    if (now < auctionStartAt || now > auctionEndAt) throw new Error("Ставки доступны только во время активного аукциона.");
     const current = Number(item.auctionCurrentPrice ?? item.auctionStartPrice ?? 0);
     const minimum = Number(item.auctionBidIncrement || 200);
     const nextAmount = Number(amount);
@@ -161,6 +630,22 @@ export const store = {
     if (nextAmount < current + minimum) {
       throw new RangeError(`Минимальная ставка — ${current + minimum}.`);
     }
+
+    if (item.auctionDemo) {
+      item.status = "AUCTION_ACTIVE";
+      item.auctionCurrentPrice = nextAmount;
+      item.auctionBidCount = Number(item.auctionBidCount || 0) + 1;
+      item.auctionWinner = bidderName;
+      item.auctionStartAt = Number(item.auctionStartAt ?? now);
+      item.auctionEndAt = Number(item.auctionEndAt ?? now + 24 * 60 * 60 * 1000);
+      try { persist(); } catch (error) { throw error; }
+      return { ...item };
+    }
+
+    const startTime = item.foundAt ? new Date(item.foundAt).getTime() : new Date(item.createdAt || Date.now()).getTime();
+    const auctionStartAt = startTime + 21 * 24 * 60 * 60 * 1000;
+    const auctionEndAt = auctionStartAt + 24 * 60 * 60 * 1000;
+    if (now < auctionStartAt || now > auctionEndAt) throw new Error("Ставки доступны только во время активного аукциона.");
     item.status = "AUCTION_ACTIVE";
     item.auctionCurrentPrice = nextAmount;
     item.auctionBidCount = Number(item.auctionBidCount || 0) + 1;
@@ -207,5 +692,7 @@ if (localStorage.getItem(SEED_FLAG) !== String(SEED_VERSION)) {
     throw error;
   }
 }
+
+ensureDemoAuctionLots();
 
 export { STORAGE_KEY };

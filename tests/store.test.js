@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 const values = new Map();
 let rejectNextWrite = false;
@@ -50,6 +52,27 @@ test("returns copies instead of exposing stored card references", () => {
   const card = store.getItems()[0];
   card.title = "mutated";
   assert.notEqual(store.getItem("seed-1").title, "mutated");
+});
+test("generates one to five distinct demo auction lots with matching local images", () => {
+  const lots = store.getAuctionLots().filter((item) => item.auctionDemo);
+  assert.ok(lots.length >= 1 && lots.length <= 5);
+  assert.equal(new Set(lots.map((item) => item.id)).size, lots.length);
+  assert.equal(new Set(lots.map((item) => item.title)).size, lots.length);
+  assert.equal(new Set(lots.map((item) => item.image)).size, lots.length);
+  for (const lot of lots) {
+    assert.ok(lot.image);
+    assert.ok(existsSync(resolve(process.cwd(), lot.image)), `${lot.title} image should exist: ${lot.image}`);
+  }
+  assert.deepEqual(
+    store.getAuctionLots().filter((item) => item.auctionDemo).map(({ id, image }) => ({ id, image })),
+    lots.map(({ id, image }) => ({ id, image }))
+  );
+  const lot = lots[0];
+  store.placeAuctionBid(lot.id, lot.auctionCurrentPrice + lot.auctionBidIncrement, "Тест");
+  const updatedLot = store.getAuctionLots().find((item) => item.id === lot.id);
+  assert.equal(updatedLot.auctionBidCount, lot.auctionBidCount + 1);
+  assert.equal(updatedLot.image, lot.image);
+  assert.equal(updatedLot.auctionEndAt, lot.auctionEndAt);
 });
 test("saving an item marks it as own and persists it", () => {
   store.setName("Алия");

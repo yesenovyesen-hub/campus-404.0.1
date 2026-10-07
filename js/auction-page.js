@@ -10,6 +10,11 @@ function makeAuctionCard(item, role, refresh) {
   const image = document.createElement("img");
   image.alt = item.title;
   image.src = item.image || getDefaultAvatar();
+  const onImageError = () => {
+    image.removeEventListener("error", onImageError);
+    image.src = getDefaultAvatar();
+  };
+  image.addEventListener("error", onImageError, { once: true });
   imageWrap.append(image);
 
   const body = document.createElement("div");
@@ -104,7 +109,7 @@ function renderRoleSelector(app) {
 }
 
 function renderAuctionView(app, role) {
-  const activeLots = getActiveAuctionLots(store.getItems());
+  const activeLots = Array.isArray(store.getAuctionLots?.()) ? store.getAuctionLots() : getActiveAuctionLots(store.getItems());
   app.className = "page-layout auction-page";
 
   const heading = document.createElement("div");
@@ -115,7 +120,7 @@ function renderAuctionView(app, role) {
   if (!activeLots.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "Пока активных лотов нет. Как только вещь достигает 21 дня, она появится здесь автоматически.";
+    empty.textContent = "Пока активных лотов нет.";
     app.append(empty);
     return;
   }

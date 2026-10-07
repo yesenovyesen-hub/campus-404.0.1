@@ -5,7 +5,22 @@
 .item-card {
   position: relative;
   min-height: 100%;
+  --card-bg: var(--card-bg-default);
+  --item-border-color: var(--card-border);
+  --card-accent: var(--accent-other);
+  --card-secondary: var(--text-secondary);
+  border: 1px solid var(--item-border-color);
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: none;
 }
+
+.item-card--electronics { --card-bg: var(--bg-electronics); --item-border-color: var(--border-electronics); --card-accent: var(--accent-electronics); }
+.item-card--documents { --card-bg: var(--bg-documents); --item-border-color: var(--border-documents); --card-accent: var(--accent-documents); }
+.item-card--clothes { --card-bg: var(--bg-clothes); --item-border-color: var(--border-clothes); --card-accent: var(--accent-clothes); }
+.item-card--books { --card-bg: var(--bg-books); --item-border-color: var(--border-books); --card-accent: var(--accent-books); }
+.item-card--valuable { --card-bg: var(--bg-valuable); --item-border-color: var(--border-valuable); --card-accent: var(--accent-valuable); }
+.item-card--other { --card-bg: var(--bg-other); --item-border-color: var(--border-other); --card-accent: var(--accent-other); }
 
 .item-card--wide {
   grid-column: span 2;
@@ -18,7 +33,7 @@
 .item-type {
   width: fit-content;
   margin: 7px 0 0;
-  color: var(--accent);
+  color: var(--card-accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .02em;
@@ -30,68 +45,28 @@
   line-height: 1.55;
 }
 
-.item-card--value {
-  border: 1px solid #d4a842;
-  background:
-    linear-gradient(var(--card), var(--card)) padding-box,
-    linear-gradient(135deg, #795313, #ffdf82 34%, #a87519 67%, #ffe7a3) border-box;
-  box-shadow: 0 0 0 1px rgba(255, 220, 132, .08), 0 9px 28px rgba(92, 62, 8, .2);
-  animation: value-edge-glimmer 5s ease-in-out infinite;
+.item-card--value,
+.item-card--toy,
+.item-card--doc,
+.item-card--tech,
+.item-card--cloth,
+.item-card--book,
+.item-card--misc {
+  border: 1px solid var(--item-border-color);
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: none;
 }
 
 .item-card--value .item-type,
-.item-card--value .rating-summary { color: #f2d276; }
-
-.item-card--toy {
-  border-color: rgba(233, 182, 198, .45);
-  border-radius: 20px;
-  background: linear-gradient(145deg, rgba(96, 62, 91, .78), rgba(54, 68, 88, .92));
-  box-shadow: 0 9px 24px rgba(38, 24, 48, .2);
-}
-
-.item-card--doc {
-  border-color: rgba(215, 194, 143, .65);
-  background: linear-gradient(145deg, #f3e9d2, #e8dcc0);
-  color: #352b1d;
-}
-
-.item-card--doc .item-location,
-.item-card--doc .item-description,
-.item-card--doc .item-meta,
-.item-card--doc .item-type { color: #5e4e35; }
-
-.item-card--doc .item-meta { border-color: rgba(73, 54, 30, .22); }
-.item-card--doc .category-tag { background: rgba(84, 63, 35, .1); color: #453720; }
-.item-card--doc .rating-summary { color: #80601c; }
-.item-card--doc .text-button { color: #c0ae91; }
-.item-card--doc .text-button:hover { background: rgba(69, 55, 32, .12); }
-
-.item-card--tech {
-  border-color: rgba(73, 130, 239, .62);
-  background: linear-gradient(145deg, rgba(13, 31, 69, .98), rgba(20, 42, 78, .96));
-  box-shadow: inset 0 0 0 1px rgba(83, 148, 255, .12), 0 8px 25px rgba(3, 13, 36, .28);
-}
-
-.item-card--tech .item-type { color: #8bc5ff; }
-.item-card--tech .item-image { box-shadow: inset 0 0 0 1px rgba(105, 172, 255, .38); }
-
-.item-card--cloth {
-  border-color: rgba(212, 151, 96, .45);
-  background: linear-gradient(145deg, rgba(91, 57, 39, .92), rgba(59, 48, 41, .96));
-}
-
-.item-card--cloth .item-type { color: #f0bd8c; }
-
-.item-card--book {
-  border-color: rgba(193, 161, 115, .55);
-  background: linear-gradient(145deg, rgba(106, 79, 52, .86), rgba(67, 53, 40, .96));
-}
-
-.item-card--book .item-type { color: #e8c99d; }
-
-.item-card--misc {
-  border-color: var(--line);
-  background: var(--card);
+.item-card--value .rating-summary,
+.item-card--toy .item-type,
+.item-card--doc .item-type,
+.item-card--tech .item-type,
+.item-card--cloth .item-type,
+.item-card--book .item-type,
+.item-card--misc .item-type {
+  color: var(--card-secondary);
 }
 
 .item-ribbon {
@@ -103,17 +78,17 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, .38);
+  border: 1px solid var(--item-border-color);
   border-radius: 999px;
-  background: rgba(24, 22, 18, .84);
-  color: #ffe39a;
+  background: var(--sidebar-bg);
+  color: var(--card-accent);
   font-size: 11px;
   font-weight: 700;
 }
 
 .item-ribbon--doc {
-  background: rgba(255, 250, 234, .94);
-  color: #584322;
+  background: var(--card-bg);
+  color: var(--card-accent);
 }
 
 .item-image-placeholder {
@@ -191,43 +166,10 @@
   .item-card--value { animation: none; }
 }
 
-:root {
-  --item-card-text: #fff;
-  --item-card-secondary: #e5e7eb;
-}
-
-:root[data-theme="light"] {
-  --item-card-text: #1f2937;
-  --item-card-secondary: #374151;
-}
-
-.item-card[data-category="Электроника"] { background: #343b45; }
-.item-card[data-category="Документы"] { background: #19385e; }
-.item-card[data-category="Одежда"] {
-  background: #581b2d;
-  --item-card-text: #fff;
-  --item-card-secondary: #f3dce2;
-}
-.item-card[data-category="Книги"] { background: #51402f; }
-.item-card[data-category="Другое"] {
-  background: linear-gradient(120deg, #fff 0%, #f6b76a 46%, #fff 100%);
-  background-size: 220% 220%;
-  animation: other-card-flow 6s ease-in-out infinite;
-}
-
-:root[data-theme="light"] .item-card[data-category="Электроника"] { background: #e5e7eb; }
-:root[data-theme="light"] .item-card[data-category="Документы"] { background: #dcebff; }
-:root[data-theme="light"] .item-card[data-category="Одежда"] {
-  background: #e8c7cf;
-  --item-card-text: #1f2937;
-  --item-card-secondary: #374151;
-}
-:root[data-theme="light"] .item-card[data-category="Книги"] { background: #d6b892; }
-
 .item-card .item-title-row h3 {
-  color: var(--item-card-text);
+  color: var(--text-primary);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .item-card .item-type,
@@ -238,9 +180,19 @@
 .item-card .category-tag,
 .item-card .rating-summary,
 .item-card .persona-badge {
-  color: var(--item-card-secondary);
+  color: var(--text-secondary);
   font-size: 17px;
   font-weight: 600;
+}
+
+.item-card .category-tag {
+  background: color-mix(in srgb, var(--card-accent) 14%, var(--card-bg));
+  color: var(--card-accent);
+}
+
+.item-card .persona-badge {
+  background: var(--sidebar-bg);
+  border-color: var(--item-border-color);
 }
 
 .item-card .status,
@@ -255,13 +207,6 @@
 .item-card .persona-badge {
   font-size: 17px;
   font-weight: 600;
-}
-
-.item-card .text-button { color: var(--item-card-text); }
-
-:root[data-theme="dark"] .item-card[data-category="Другое"] *,
-:root:not([data-theme]) .item-card[data-category="Другое"] * {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .85), 0 0 4px rgba(0, 0, 0, .7);
 }
 
 @keyframes other-card-flow {

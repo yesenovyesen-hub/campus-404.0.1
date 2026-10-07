@@ -59,7 +59,10 @@ function reportStorageError(error) {
 
 function applyTheme() {
   const preference = store.getTheme() || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-  document.documentElement.dataset.theme = preference;
+  const root = document.documentElement;
+  root.classList.toggle("light", preference === "light");
+  root.classList.toggle("dark", preference === "dark");
+  root.dataset.theme = preference;
   const toggle = document.querySelector("#theme-switch");
   toggle.setAttribute("aria-checked", String(preference === "light"));
 }
@@ -172,10 +175,24 @@ function iconForItem(item) {
   return "fa-box";
 }
 
+function getCardThemeClass(item) {
+  const category = String(item?.category || "").trim().toLowerCase("ru");
+  const isValuable = Boolean(item?.isValuable || /золото|бриллиант|ювел|часы|серебр|сапфир|золот/i.test(`${item?.title || ""} ${item?.description || ""}`));
+
+  if (isValuable) return "item-card--valuable";
+  if (category.includes("электр") || category.includes("электро")) return "item-card--electronics";
+  if (category.includes("докум")) return "item-card--documents";
+  if (category.includes("одежд")) return "item-card--clothes";
+  if (category.includes("книг")) return "item-card--books";
+  if (category.includes("друго")) return "item-card--other";
+  return "item-card--other";
+}
+
 function makeCard(item, index) {
   const card = element("article", "item-card");
   const variant = ["value", "toy", "doc", "tech", "cloth", "book", "misc"].includes(item.variant) ? item.variant : "misc";
-  card.classList.add(`item-card--${variant}`);
+  const categoryTheme = getCardThemeClass(item);
+  card.classList.add(`item-card--${variant}`, categoryTheme);
   if ((index + 1) % 5 === 0) card.classList.add("item-card--wide");
   card.dataset.cardId = item.id;
   card.dataset.ownerName = item.ownerName;
@@ -391,7 +408,7 @@ function renderChats() {
 
 function updateAuctionButtonState() {
   if (!auctionButton) return;
-  const activeLots = getActiveAuctionLots(store.getItems());
+  const activeLots = Array.isArray(store.getAuctionLots?.()) ? store.getAuctionLots() : getActiveAuctionLots(store.getItems());
   const hasLots = activeLots.length > 0;
   auctionButton.disabled = !hasLots;
   auctionButton.classList.toggle("is-disabled", !hasLots);
